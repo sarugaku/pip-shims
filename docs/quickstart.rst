@@ -2,6 +2,7 @@
 pip-shims: Shims for importing packages from pip's internals.
 ===============================================================================
 
+
 .. image:: https://img.shields.io/pypi/v/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
 
@@ -50,7 +51,7 @@ Summary
 **pip-shims** is a set of compatibilty access shims to the `pip`_ internal API. **pip-shims**
 provides compatibility with pip versions 8.0 through the current release (18.x).  The shims
 are provided using a lazy import strategy (powered by `modutil`_ where possible, falling
-back to **importlib** from the standard library with a lazy import strategy otherwise).
+back to *importlib* from the standard library with a lazy import strategy otherwise).
 This library exists due to my constant writing of the same set of import shims across
 many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_, and
 `passa`_.
@@ -77,9 +78,6 @@ You can use **pip-shims** to expose elements of **pip**'s internal API by import
 
     from pip_shims import Wheel
     mywheel = Wheel('/path/to/my/wheel.whl')
-    pipfile = pip-shims.load('/path/to/project/dir/or/Pipfile')
-    lockfile = pip-shims.resolve(pipfile)
-    lockfile.create()
 
 
 Available Shims
@@ -103,7 +101,7 @@ req.req_install    InstallRequirement
 download           is_archive_file
 download           is_file_url
 utils.misc         is_installable_dir          utils
-index Link
+index              Link
 operations.prepare make_abstract_dist          req.req_set
 cli.cmdoptions     make_option_group           cmdoptions
 index              PackageFinder
@@ -122,3 +120,4 @@ locations          USER_CACHE_DIR
 vcs                VcsSupport
 wheel              Wheel
 cache              WheelCache
+================== =========================== ================

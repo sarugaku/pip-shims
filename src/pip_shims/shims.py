@@ -24,11 +24,15 @@ def do_import(module_path, subimport=None, old_path=None, base_path="pip"):
     old_path = old_path or module_path
     prefixes = [pth.format(base_path) for pth in ["{0}._internal", "{0}"]]
     paths = [module_path, old_path]
-    search_order = ["{0}.{1}".format(p, pth) for p in prefixes for pth in paths if pth is not None]
+    search_order = [
+        "{0}.{1}".format(p, pth) for p in prefixes for pth in paths if pth is not None
+    ]
     imported = None
     if has_modutil:
         pkgs = [get_package(pkg, subimport) for pkg in search_order]
-        imports = [modutil.lazy_import(__name__, {to_import,}) for to_import, pkg in pkgs]
+        imports = [
+            modutil.lazy_import(__name__, {to_import}) for to_import, pkg in pkgs
+        ]
         imp_getattrs = [imp_getattr for mod, imp_getattr in imports]
         chained = modutil.chained___getattr__(__name__, *imp_getattrs)
         imported = None
@@ -57,19 +61,27 @@ def do_import(module_path, subimport=None, old_path=None, base_path="pip"):
 _strip_extras = do_import("req.req_install", "_strip_extras")
 cmdoptions = do_import("cli.cmdoptions", old_path="cmdoptions")
 Command = do_import("cli.base_command", "Command", old_path="basecommand")
-ConfigOptionParser = do_import("cli.parser", "ConfigOptionParser", old_path="baseparser")
+ConfigOptionParser = do_import(
+    "cli.parser", "ConfigOptionParser", old_path="baseparser"
+)
 DistributionNotFound = do_import("exceptions", "DistributionNotFound")
 FAVORITE_HASH = do_import("utils.hashes", "FAVORITE_HASH")
 FormatControl = do_import("index", "FormatControl")
-get_installed_distributions = do_import('utils.misc', 'get_installed_distributions', old_path='utils')
+get_installed_distributions = do_import(
+    "utils.misc", "get_installed_distributions", old_path="utils"
+)
 index_group = do_import("cli.cmdoptions", "index_group", old_path="cmdoptions")
 InstallRequirement = do_import("req.req_install", "InstallRequirement")
 is_archive_file = do_import("download", "is_archive_file")
 is_file_url = do_import("download", "is_file_url")
 is_installable_dir = do_import("utils.misc", "is_installable_dir", old_path="utils")
 Link = do_import("index", "Link")
-make_abstract_dist = do_import("operations.prepare", "make_abstract_dist", old_path="req.req_set")
-make_option_group = do_import("cli.cmdoptions", "make_option_group", old_path="cmdoptions")
+make_abstract_dist = do_import(
+    "operations.prepare", "make_abstract_dist", old_path="req.req_set"
+)
+make_option_group = do_import(
+    "cli.cmdoptions", "make_option_group", old_path="cmdoptions"
+)
 PackageFinder = do_import("index", "PackageFinder")
 parse_requirements = do_import("req.req_file", "parse_requirements")
 parse_version = do_import("index", "parse_version")
@@ -89,6 +101,7 @@ WheelCache = do_import("cache", "WheelCache")
 
 
 if not RequirementTracker:
+
     @contextmanager
     def RequirementTracker():
         yield

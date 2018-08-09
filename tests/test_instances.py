@@ -149,7 +149,7 @@ def test_resolution(tmpdir, PipCommand):
     pip_command.parser.add_option_group(
         make_option_group(index_group, pip_command.parser)
     )
-    pip_options, _ = pip_command.parser.parse_args()
+    pip_options, _ = pip_command.parser.parse_args([])
     CACHE_DIR = tmpdir.mkdir("CACHE_DIR")
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)

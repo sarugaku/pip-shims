@@ -12,4 +12,5 @@ Submodules
 .. toctree::
 
    pip_shims.shims
+   pip_shims.utils
 

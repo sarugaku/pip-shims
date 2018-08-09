@@ -6,14 +6,7 @@ dist: trusty
 matrix:
   fast_finish: true
   include:
-    - python: "3.7"
-      env: RUN_COVERAGE=1
-      dist: xenial
-      sudo: true
-    - python: "3.6"
-    - python: "2.7"
-    - python: "3.5"
-    - python: "3.4"
+
 
 install:
   - "pip install --upgrade pip pytest pytest-xdist"
@@ -24,6 +17,14 @@ script:
 jobs:
   include:
     - stage: test
+    - python: "3.7"
+      env: RUN_COVERAGE=1
+      dist: xenial
+      sudo: required
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - python: "3.4"
     - stage: packaging
       python: "3.6"
       install:
@@ -33,7 +34,7 @@ jobs:
     - stage: coverage
       python: "3.6"
       install:
-        - "pip install --upgrade pip pytest pytest-xdist coverage"
+        - "pip install --upgrade pip pytest pytest-cov pytest-timeout pytest-xdist coverage"
         - "pip install --upgrade -e ."
       script:
         - "pytest --timeout 300 --cov=pip_shims --cov-report=term-missing --cov-report=xml --cov-report=html tests/"

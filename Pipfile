@@ -12,6 +12,8 @@ black = "*"
 pytest = '*'
 flake8 = '*'
 rope = "*"
+pytest-cov = "*"
+pytest-timeout = "*"
 
 [scripts]
 release = 'inv release'

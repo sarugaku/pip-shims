@@ -23,7 +23,7 @@ path_info = namedtuple("PathInfo", "path start_version end_version")
 parsed_pip_version = _parse(pip_version)
 
 
-def is_valid(path_info_tuple):    
+def is_valid(path_info_tuple):
     if path_info_tuple.start_version >= parsed_pip_version and path_info_tuple.end_version <= parsed_pip_version:
         return 1
     return 0
@@ -36,7 +36,6 @@ def do_import(module_paths, base_path=BASE_IMPORT_PATH):
     if _parse(pip_version) < _parse("10.0.0"):
         prefix_order = reversed(prefix_order)
     paths = sorted(module_paths, key=is_valid, reverse=True)
-    print(paths)
     search_order = [
         "{0}.{1}".format(p, pth.path)
         for p in prefix_order

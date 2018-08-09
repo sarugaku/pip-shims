@@ -9,6 +9,9 @@ parver = '*'
 towncrier = '*'
 wheel = '*'
 black = "*"
+pytest = '*'
+flake8 = '*'
+rope = "*"
 
 [scripts]
 release = 'inv release'

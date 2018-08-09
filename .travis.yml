@@ -1,0 +1,36 @@
+language: python
+sudo: false
+cache: pip
+dist: trusty
+
+matrix:
+  fast_finish: true
+  include:
+    - python: "3.7"
+      env: RUN_COVERAGE=1
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - python: "3.4"
+
+install:
+  - "pip install --upgrade pip pytest pytest-xdist"
+  - "pip install -e . "
+script:
+    - "py.test -v -n 8 tests/"
+
+jobs:
+  include:
+    - stage: "packaging"
+      python: "3.7"
+      install:
+        - "pip install --upgrade check-manifest readme-renderer"
+      script: 
+        - "python setup.py check -m -r -s"
+    - stage: "coverage"
+      python: "3.7"
+      install:
+        - "pip install --upgrade pip pytest pytest-xdist coverage"
+        - "pip install --upgrade -e ."
+      script:
+        - "pytest --timeout 300 --cov=pip_shims --cov-report=term-missing --cov-report=xml --cov-report=html tests/"

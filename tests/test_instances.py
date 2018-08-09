@@ -1,4 +1,5 @@
 # -*- coding=utf-8 -*-
+from __future__ import absolute_import, unicode_literals
 from pip_shims import (
     _strip_extras,
     cmdoptions,
@@ -31,7 +32,7 @@ from pip_shims import (
     USER_CACHE_DIR,
     VcsSupport,
     Wheel,
-    WheelCache
+    WheelCache,
 )
 import pytest
 import sys
@@ -43,7 +44,7 @@ if sys.version_info < (3, 0):
 
 
 def test_strip_extras():
-    assert _strip_extras('requests[security]') == ('requests', '[security]')
+    assert _strip_extras("requests[security]") == ("requests", "[security]")
 
 
 def test_cmdoptions():
@@ -57,41 +58,41 @@ def test_command(PipCommand):
     assert make_option_group
     assert index_group
     index_opts = cmdoptions.make_option_group(
-        cmdoptions.index_group,
-        pip_command.parser,
+        cmdoptions.index_group, pip_command.parser
     )
     pip_command.parser.insert_option_group(0, index_opts)
-    assert 'pypi' in pip_command.parser.option_groups[0].get_option('-i').default
+    assert "pypi" in pip_command.parser.option_groups[0].get_option("-i").default
 
 
 def test_configparser(PipCommand):
     pip_command = PipCommand()
     config_parser = ConfigOptionParser(name="test_parser")
     config_parser.add_option_group(make_option_group(index_group, config_parser))
-    assert 'pypi' in config_parser.option_groups[0].get_option('-i').default
+    assert "pypi" in config_parser.option_groups[0].get_option("-i").default
 
 
-@pytest.mark.parametrize("exceptionclass, baseclass", [
-    (DistributionNotFound, Exception),
-    (PipError, Exception)
-])
+@pytest.mark.parametrize(
+    "exceptionclass, baseclass",
+    [(DistributionNotFound, Exception), (PipError, Exception)],
+)
 def test_exceptions(exceptionclass, baseclass):
     assert issubclass(exceptionclass, baseclass)
 
 
 def test_favorite_hash():
-    assert FAVORITE_HASH == 'sha256'
+    assert FAVORITE_HASH == "sha256"
 
 
 def test_format_control():
     from collections import namedtuple
+
     fc = namedtuple("FormatControl", "no_binary, only_binary")
     assert fc(None, None) == FormatControl(None, None)
 
 
 def test_get_installed():
     dists = get_installed_distributions()
-    assert 'pip-shims' in [p.project_name for p in dists]
+    assert "pip-shims" in [p.project_name for p in dists]
 
 
 def test_link_and_ireq():
@@ -111,28 +112,32 @@ def test_path_and_url():
 
 def test_cache_dir(PipCommand):
     pip_command = PipCommand()
-    assert pip_command.parser.get_option('--cache-dir').default == USER_CACHE_DIR
+    assert pip_command.parser.get_option("--cache-dir").default == USER_CACHE_DIR
 
 
 def test_is_installable(tmpdir):
     temp_dir = tmpdir.mkdir("test_package")
-    setup_py_loc = temp_dir.join('setup.py')
-    setup_py_loc.write_text(textwrap.dedent("""
+    setup_py_loc = temp_dir.join("setup.py")
+    setup_py_loc.write_text(
+        textwrap.dedent(
+            """
         from setuptools import setup
         setup(
             name="Test Project",
             version="0.0.0"
         )
-    """), encoding="utf-8")
+    """),
+        encoding="utf-8",
+    )
     assert is_installable_dir(temp_dir)
 
 
 def test_parse_version():
-    assert str(parse_version('0.0.1')) == '0.0.1'
+    assert str(parse_version("0.0.1")) == "0.0.1"
 
 
 def test_archive_file():
-    assert is_archive_file('https://github.com/requests/requests/releases/2.19.1.zip')
+    assert is_archive_file("https://github.com/requests/requests/releases/2.19.1.zip")
 
 
 def test_pip_version():
@@ -141,7 +146,9 @@ def test_pip_version():
 
 def test_resolution(tmpdir, PipCommand):
     pip_command = PipCommand()
-    pip_command.parser.add_option_group(make_option_group(index_group, pip_command.parser))
+    pip_command.parser.add_option_group(
+        make_option_group(index_group, pip_command.parser)
+    )
     pip_options, _ = pip_command.parser.parse_args()
     CACHE_DIR = tmpdir.mkdir("CACHE_DIR")
     pip_options.cache_dir = CACHE_DIR.strpath
@@ -156,19 +163,29 @@ def test_resolution(tmpdir, PipCommand):
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
     requests_candidates = finder.find_all_candidates(ireq.name)
-    candidates = sorted([
-        c for c in requests_candidates
-        if c.version in ireq.specifier.filter(
-            (candidate.version for candidate in requests_candidates)
-        )
-    ], key=lambda c: c.version)
+    candidates = sorted(
+        [
+            c
+            for c in requests_candidates
+            if c.version
+            in ireq.specifier.filter(
+                (candidate.version for candidate in requests_candidates)
+            )
+        ],
+        key=lambda c: c.version,
+    )
     best_version = candidates[-1]
-    assert 'pythonhosted' in best_version.location.url
+    assert "pythonhosted" in best_version.location.url
     req_file = tmpdir.mkdir("req_dir").join("requirements.txt")
-    req_file.write_text(textwrap.dedent("""
-    requests>=2.18
-    """), encoding="utf-8")
-    parsed_ireq = parse_requirements(req_file.strpath, finder=finder, session=finder.session, options=pip_options)
+    req_file.write_text(
+        textwrap.dedent("""
+            requests>=2.18
+        """),
+        encoding="utf-8",
+    )
+    parsed_ireq = parse_requirements(
+        req_file.strpath, finder=finder, session=finder.session, options=pip_options
+    )
 
     build_dir = tmpdir.mkdir("build_dir")
     source_dir = tmpdir.mkdir("source_dir")
@@ -177,45 +194,45 @@ def test_resolution(tmpdir, PipCommand):
     pkg_download_dir = CACHE_DIR.mkdir("pkgs")
     results = None
     wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
-    if parse_version(pip_version) < parse_version('10.0'):
+    if parse_version(pip_version) < parse_version("10.0"):
         reqset = RequirementSet(
             build_dir.strpath,
             source_dir.strpath,
             download_dir=download_dir.strpath,
             wheel_download_dir=wheel_download_dir.strpath,
             session=finder.session,
-            wheel_cache=wheel_cache
+            wheel_cache=wheel_cache,
         )
         results = reqset._prepare_file(finder, ireq)
     else:
         preparer_kwargs = {
-            'build_dir': build_dir.strpath,
-            'src_dir': source_dir.strpath,
-            'download_dir': download_dir.strpath,
-            'wheel_download_dir': wheel_download_dir.strpath,
-            'progress_bar': 'off',
-            'build_isolation': False
+            "build_dir": build_dir.strpath,
+            "src_dir": source_dir.strpath,
+            "download_dir": download_dir.strpath,
+            "wheel_download_dir": wheel_download_dir.strpath,
+            "progress_bar": "off",
+            "build_isolation": False,
         }
         resolver_kwargs = {
-            'finder': finder,
-            'session': finder.session,
-            'upgrade_strategy': "to-satisfy-only",
-            'force_reinstall': False,
-            'ignore_dependencies': False,
-            'ignore_requires_python': False,
-            'ignore_installed': True,
-            'isolated': False,
-            'wheel_cache': wheel_cache,
-            'use_user_site': False
+            "finder": finder,
+            "session": finder.session,
+            "upgrade_strategy": "to-satisfy-only",
+            "force_reinstall": False,
+            "ignore_dependencies": False,
+            "ignore_requires_python": False,
+            "ignore_installed": True,
+            "isolated": False,
+            "wheel_cache": wheel_cache,
+            "use_user_site": False,
         }
         resolver = None
         preparer = None
         with RequirementTracker() as req_tracker:
             # Pip 18 uses a requirement tracker to prevent fork bombs
             if req_tracker:
-                preparer_kwargs['req_tracker'] = req_tracker
+                preparer_kwargs["req_tracker"] = req_tracker
             preparer = RequirementPreparer(**preparer_kwargs)
-            resolver_kwargs['preparer'] = preparer
+            resolver_kwargs["preparer"] = preparer
             reqset = RequirementSet()
             ireq.is_direct = True
             reqset.add_requirement(ireq)
@@ -225,24 +242,26 @@ def test_resolution(tmpdir, PipCommand):
             reqset.cleanup_files()
     results = set(results)
     result_names = [r.name for r in results]
-    assert 'chardet' in result_names
+    assert "chardet" in result_names
 
 
 def test_abstract_dist():
-    ireq = InstallRequirement.from_editable("git+https://github.com/requests/requests.git@2.19.1#egg=requests")
+    ireq = InstallRequirement.from_editable(
+        "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
+    )
     abs_dist = make_abstract_dist(ireq)
     assert abs_dist.__class__.__name__ == "IsSDist"
 
 
 def test_safe_file_cache():
     sfc = SafeFileCache(directory=USER_CACHE_DIR)
-    assert sfc.__class__.__name__ == 'SafeFileCache'
+    assert sfc.__class__.__name__ == "SafeFileCache"
 
 
 def test_wheel_cache():
     fc = FormatControl(None, None)
     w = WheelCache(USER_CACHE_DIR, fc)
-    assert w.__class__.__name__ == 'WheelCache'
+    assert w.__class__.__name__ == "WheelCache"
 
 
 def test_vcs_support():
@@ -251,5 +270,6 @@ def test_vcs_support():
 
 
 def test_wheel():
-    w = Wheel('pytoml-0.1.18-cp36-none-any.whl')
-    assert w.pyversions == ['cp36']
+    w = Wheel("pytoml-0.1.18-cp36-none-any.whl")
+    assert w.pyversions == ["cp36"]
+

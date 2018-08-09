@@ -8,8 +8,8 @@ pip-shims: Shims for importing packages from pip's internals.
 .. image:: https://img.shields.io/pypi/l/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
 
-.. image:: https://travis-ci.org/sarugaku/pip-shims.svg?branch=master
-    :target: https://travis-ci.org/sarugaku/pip-shims
+.. image:: https://travis-ci.com/sarugaku/pip-shims.svg?branch=master
+    :target: https://travis-ci.com/sarugaku/pip-shims
 
 .. image:: https://img.shields.io/pypi/pyversions/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
@@ -17,8 +17,8 @@ pip-shims: Shims for importing packages from pip's internals.
 .. image:: https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg
     :target: https://saythanks.io/to/techalchemy
 
-.. image:: https://readthedocs.org/projects/pip-shims/badge/?version=master
-    :target: http://pip-shims.readthedocs.io/en/master/?badge=master
+.. image:: https://readthedocs.org/projects/pip-shims/badge/?version=latest
+    :target: https://pip-shims.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
 

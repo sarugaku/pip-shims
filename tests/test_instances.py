@@ -129,7 +129,7 @@ def test_is_installable(tmpdir):
     """),
         encoding="utf-8",
     )
-    assert is_installable_dir(temp_dir)
+    assert is_installable_dir(temp_dir.strpath)
 
 
 def test_parse_version():

@@ -22,6 +22,16 @@ pip-shims: Shims for importing packages from pip's internals.
     :alt: Documentation Status
 
 
+.. warning::
+
+    The authors of `pip`_ **do not condone** the use of this package. Relying on pip's
+    internals is a **dangerous** idea for your software as they are broken intentionally
+    and regularly.  This package may not always be completely updated up PyPI, so relying
+    on it may break your code! User beware!
+
+
+.. _pip: https://github.com/pypa/pip
+
 Installation
 *************
 

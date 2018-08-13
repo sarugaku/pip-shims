@@ -18,7 +18,6 @@ pytest-timeout = "*"
 [scripts]
 release = 'inv release'
 black = 'black src/pip_shims/ --exclude "/(\.git|\.hg|\.mypy_cache|\.tox|\.venv|_build|buck-out|build|dist|src/pip_shims/_vendor)/"'
-mknews = "towncrier"
 tests = "pytest -v tests"
 draft = "towncrier --draft"
 changelog = "towncrier"

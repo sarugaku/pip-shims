@@ -12,14 +12,16 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, '/home/hawk/git/pip-shims/src/pip_shims')
+import os
+import sys
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+SHIMS_DIR = os.path.join(ROOT_DIR, "src", "pip_shims")
+sys.path.insert(0, SHIMS_DIR)
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'pip_shims'
+project = 'pip-shims'
 copyright = '2018, Dan Ryan <dan@danryan.co>'
 author = 'Dan Ryan <dan@danryan.co>'
 
@@ -42,6 +44,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autosummary'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -70,6 +74,7 @@ exclude_patterns = ['_build', '_man', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+autosummary_generate = True
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -125,7 +130,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pip_shimsdoc'
+htmlhelp_basename = 'pip-shimsdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -152,7 +157,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pip_shims.tex', 'pip\\_shims Documentation',
+    (master_doc, 'pip-shims.tex', 'pip\\_shims Documentation',
      'Dan Ryan \\textless{}dan@danryan.co\\textgreater{}', 'manual'),
 ]
 
@@ -162,7 +167,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pip_shims', 'pip_shims Documentation',
+    (master_doc, 'pip-shims', 'pip-shims Documentation',
      [author], 1)
 ]
 
@@ -173,8 +178,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pip_shims', 'pip_shims Documentation',
-     author, 'pip_shims', 'One line description of project.',
+    (master_doc, 'pip-shims', 'pip-shims Documentation',
+     author, 'pip-shims', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -206,3 +211,4 @@ epub_exclude_files = ['search.html']
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}

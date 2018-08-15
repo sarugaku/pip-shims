@@ -1,0 +1,1 @@
+Added warning to documentation to discourage use of these shims for accessing the pip API.

@@ -109,7 +109,7 @@ def test_path_and_url():
     url = "file://{0}{1}".format(prefix, path)
     assert is_file_url(Link(url))
     assert path_to_url(path) == url
-    assert url_to_path(url) == path
+    assert url_to_path(url) == os.path.realpath(path)
 
 
 def test_cache_dir(PipCommand):

@@ -31,7 +31,7 @@ jobs:
     - stage: coverage
       python: "3.6"
       install:
-        - "python -m pip install --upgrade pip"
-        - "python -m pip install --upgrade -e .[tests]"
+        - "pip install --upgrade pip pytest-timeout"
+        - "pip install --upgrade -e .[tests]"
       script:
-        - "python -m pytest -n auto --timeout 300 --cov=pip_shims --cov-report=term-missing --cov-report=xml --cov-report=html tests"
+        - "pytest -n auto --timeout 300 --cov=pip_shims --cov-report=term-missing --cov-report=xml --cov-report=html tests"

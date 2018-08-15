@@ -1,5 +1,5 @@
 [packages]
-pip_shims = { path = '.', editable = true }
+pip_shims = { path = '.', editable = true, extras = ["tests"] }
 
 [dev-packages]
 invoke = '*'

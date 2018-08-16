@@ -16,6 +16,7 @@ if sys.version_info[:2] >= (3, 7):
         has_modutil = False
     else:
         has_modutil = True
+        __dir__ = lambda: frozenset(__all__) + modutil.COMMON_MODULE_ATTRS
 
 
 BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
@@ -32,7 +33,7 @@ def is_valid(path_info_tuple):
     return 0
 
 
-def do_import(module_paths, base_path=BASE_IMPORT_PATH):
+def get_ordered_paths(module_paths, base_path):
     if not isinstance(module_paths, list):
         module_paths = [module_paths]
     prefix_order = [pth.format(base_path) for pth in ["{0}._internal", "{0}"]]
@@ -45,6 +46,10 @@ def do_import(module_paths, base_path=BASE_IMPORT_PATH):
         for pth in paths
         if pth is not None
     ]
+    return search_order
+    imported = None
+def do_import(module_paths, base_path=BASE_IMPORT_PATH):
+    search_order = get_ordered_paths(module_paths, base_path)
     imported = None
     if has_modutil:
         pkgs = [get_package(pkg) for pkg in search_order]

@@ -14,6 +14,7 @@ from pip_shims import (
     InstallRequirement,
     is_archive_file,
     is_file_url,
+    unpack_url,
     is_installable_dir,
     Link,
     make_abstract_dist,
@@ -34,6 +35,7 @@ from pip_shims import (
     VcsSupport,
     Wheel,
     WheelCache,
+    WheelBuilder
 )
 import pytest
 import sys
@@ -275,3 +277,64 @@ def test_wheel():
     w = Wheel("pytoml-0.1.18-cp36-none-any.whl")
     assert w.pyversions == ["cp36"]
 
+
+def test_wheelbuilder(tmpdir, PipCommand):
+    output_dir = tmpdir.join("output")
+    output_dir.mkdir()
+    reqset = RequirementSet()
+    pip_command = PipCommand()
+    pip_command.parser.add_option_group(
+        make_option_group(index_group, pip_command.parser)
+    )
+    pip_options, _ = pip_command.parser.parse_args([])
+    CACHE_DIR = tmpdir.mkdir("CACHE_DIR")
+    pip_options.cache_dir = CACHE_DIR.strpath
+    session = pip_command._build_session(pip_options)
+    finder = PackageFinder(
+        find_links=pip_options.find_links,
+        index_urls=[pip_options.index_url],
+        trusted_hosts=pip_options.trusted_hosts,
+        allow_all_prereleases=False,
+        session=session,
+    )
+    build_dir = tmpdir.mkdir("build_dir")
+    source_dir = tmpdir.mkdir("source_dir")
+    download_dir = tmpdir.mkdir("download_dir")
+    wheel_download_dir = CACHE_DIR.mkdir("wheels")
+    wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
+    kwargs = {
+        "build_dir": build_dir.strpath,
+        "src_dir": source_dir.strpath,
+        "download_dir": download_dir.strpath,
+        "wheel_download_dir": wheel_download_dir.strpath,
+        "wheel_cache": wheel_cache,
+    }
+    ireq = InstallRequirement.from_editable("git+https://github.com/benjaminp/six.git@1.11.0#egg=six")
+    ireq.populate_link(finder, False, False)
+    ireq.ensure_has_source_dir(kwargs["src_dir"])
+    # Ensure the remote artifact is downloaded locally. For wheels, it is
+    # enough to just download because we'll use them directly. For an sdist,
+    # we need to unpack so we can build it.
+    if not is_file_url(ireq.link):
+        unpack_url(
+            ireq.link, ireq.source_dir, kwargs["download_dir"],
+            only_download=ireq.is_wheel, session=session,
+            hashes=ireq.hashes(True), progress_bar=False,
+        )
+    output_file = None
+    if parse_version(pip_version) < parse_version("10"):
+        reqset = RequirementSet(**kwargs)
+        ireq.is_direct = True
+        reqset.add(ireq)
+        builder = WheelBuilder(reqset, finder)
+        output_file = builder._build_one(ireq, output_dir)
+    else:
+        kwargs.update({"progress_bar": "off", "build_isolation": False})
+        wheel_cache = kwargs.pop("wheel_cache")
+        with RequirementTracker() as req_tracker:
+            if req_tracker:
+                kwargs["req_tracker"] = req_tracker
+            preparer = RequirementPreparer(**kwargs)
+            builder = WheelBuilder(finder, preparer, wheel_cache)
+            output_file = builder._build_one(ireq, output_dir)
+    assert output_file, output_file

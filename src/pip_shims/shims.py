@@ -16,7 +16,6 @@ if sys.version_info[:2] >= (3, 7):
         has_modutil = False
     else:
         has_modutil = True
-        __dir__ = lambda: frozenset(__all__) + modutil.COMMON_MODULE_ATTRS
 
 
 BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
@@ -47,7 +46,8 @@ def get_ordered_paths(module_paths, base_path):
         if pth is not None
     ]
     return search_order
-    imported = None
+
+
 def do_import(module_paths, base_path=BASE_IMPORT_PATH):
     search_order = get_ordered_paths(module_paths, base_path)
     imported = None
@@ -141,6 +141,7 @@ is_archive_file = do_import(
 is_file_url = do_import(
     [path_info("download.is_file_url", _parse("7.0.0"), _parse("9999"))]
 )
+unpack_url = do_import([path_info("download.unpack_url", _parse("7.0.0"), _parse("9999"))])
 is_installable_dir = do_import(
     [
         path_info("utils.misc.is_installable_dir", _parse("10.0.0"), _parse("9999")),
@@ -203,6 +204,7 @@ USER_CACHE_DIR = do_import(
 VcsSupport = do_import([path_info("vcs.VcsSupport", _parse("7.0.0"), _parse("9999"))])
 Wheel = do_import([path_info("wheel.Wheel", _parse("7.0.0"), _parse("9999"))])
 WheelCache = do_import([path_info("cache.WheelCache", _parse("7.0.0"), _parse("9999"))])
+WheelBuilder = do_import([path_info("wheel.WheelBuilder", _parse("7.0.0"), _parse("9999"))])
 
 
 if not RequirementTracker:

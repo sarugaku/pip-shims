@@ -238,7 +238,8 @@
                 "sha256:4b475bbd528acce094c503a3d2dbc2d05a4075f6d0ef7d9e7514518e14cc5191"
             ],
             "index": "pypi",
-            "version": "==18.6b4"
+            "version": "==18.6b4",
+            "markers": "python_version>='3.6'"
         },
         "certifi": {
             "hashes": [

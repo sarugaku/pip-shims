@@ -53,7 +53,6 @@ def do_import(module_paths, base_path=BASE_IMPORT_PATH):
     imported = None
     if has_modutil:
         pkgs = [get_package(pkg) for pkg in search_order]
-        print(pkgs)
         imports = [
             modutil.lazy_import(__name__, {to_import}) for to_import, pkg in pkgs
         ]

@@ -13,9 +13,9 @@ matrix:
 
 install:
   - "python -m pip install pip==${PIP}"
-  - "python -m pip install -e .[tests]"
+  - "python -m pip install --upgrade -e .[tests]"
 script:
-    - "python -m pytest -v -n 8 tests/"
+  - "python -m pytest -v -n 8 tests/"
 
 jobs:
   include:

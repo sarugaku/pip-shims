@@ -3,11 +3,16 @@ sudo: false
 cache: pip
 dist: trusty
 
+env:
+  - PIP=9.0.3
+  - PIP=10.0.1
+  - PIP=18.0
+
 matrix:
   fast_finish: true
 
 install:
-  - "python -m pip install --upgrade pip"
+  - "python -m pip install pip==${PIP}"
   - "python -m pip install -e .[tests]"
 script:
     - "python -m pytest -v -n 8 tests/"
@@ -24,12 +29,16 @@ jobs:
     - python: "3.4"
     - stage: packaging
       python: "3.6"
+      env:
+        - PIP=18.0
       install:
         - "python -m pip install --upgrade check-manifest readme-renderer"
       script:
         - "python setup.py check -m -r -s"
     - stage: coverage
       python: "3.6"
+      env:
+        - PIP=18.0
       install:
         - "pip install --upgrade pip pytest-timeout"
         - "pip install --upgrade -e .[tests]"

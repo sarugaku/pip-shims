@@ -314,12 +314,15 @@ def test_wheelbuilder(tmpdir, PipCommand):
     # Ensure the remote artifact is downloaded locally. For wheels, it is
     # enough to just download because we'll use them directly. For an sdist,
     # we need to unpack so we can build it.
+    unpack_kwargs = {
+        "only_download": ireq.is_wheel,
+        "session": session,
+        "hashes": ireq.hashes(True)
+    }
+    if parse_version(pip_version) >= parse_version("10"):
+        unpack_kwargs["progress_bar"] = False
     if not is_file_url(ireq.link):
-        unpack_url(
-            ireq.link, ireq.source_dir, kwargs["download_dir"],
-            only_download=ireq.is_wheel, session=session,
-            hashes=ireq.hashes(True), progress_bar=False,
-        )
+        unpack_url(ireq.link, ireq.source_dir, kwargs["download_dir"], **unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
         reqset = RequirementSet(**kwargs)

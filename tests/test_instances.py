@@ -278,6 +278,10 @@ def test_wheel():
     assert w.pyversions == ["cp36"]
 
 
+@pytest.mark.skipif(
+    sys.version_info > (3, 0) and sys.version_info < (3, 5),
+    "Can't build a wheel for six on python 3.5"
+)
 def test_wheelbuilder(tmpdir, PipCommand):
     output_dir = tmpdir.join("output")
     output_dir.mkdir()

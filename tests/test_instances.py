@@ -328,7 +328,6 @@ def test_wheelbuilder(tmpdir, PipCommand):
         kwargs["session"] = finder.session
         reqset = RequirementSet(**kwargs)
         ireq.is_direct = True
-        reqset.add(ireq)
         builder = WheelBuilder(reqset, finder)
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:

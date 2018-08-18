@@ -127,8 +127,10 @@ req.req_tracker    RequirementTracker
 resolve            Resolver
 download           SafeFileCache
 download           url_to_path
+download           unpack_url
 locations          USER_CACHE_DIR
 vcs                VcsSupport
 wheel              Wheel
-cache              WheelCache
+wheel              WheelBuilder
+cache              WheelCache                  wheel
 ================== =========================== ================

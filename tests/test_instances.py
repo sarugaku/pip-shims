@@ -278,10 +278,13 @@ def test_wheel():
     assert w.pyversions == ["cp36"]
 
 
+@pytest.mark.skipif(
+    (sys.version_info > (3, 0) and sys.version_info < (3, 5)),
+    reason="Can't build a wheel for six on python 3.5"
+)
 def test_wheelbuilder(tmpdir, PipCommand):
     output_dir = tmpdir.join("output")
     output_dir.mkdir()
-    reqset = RequirementSet()
     pip_command = PipCommand()
     pip_command.parser.add_option_group(
         make_option_group(index_group, pip_command.parser)
@@ -309,23 +312,26 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "wheel_download_dir": wheel_download_dir.strpath,
         "wheel_cache": wheel_cache,
     }
-    ireq = InstallRequirement.from_editable("git+https://github.com/benjaminp/six.git@1.11.0#egg=six")
+    ireq = InstallRequirement.from_editable("git+https://github.com/urllib3/urllib3@1.23#egg=urllib3")
     ireq.populate_link(finder, False, False)
     ireq.ensure_has_source_dir(kwargs["src_dir"])
     # Ensure the remote artifact is downloaded locally. For wheels, it is
     # enough to just download because we'll use them directly. For an sdist,
     # we need to unpack so we can build it.
+    unpack_kwargs = {
+        "only_download": ireq.is_wheel,
+        "session": session,
+        "hashes": ireq.hashes(True)
+    }
+    if parse_version(pip_version) >= parse_version("10"):
+        unpack_kwargs["progress_bar"] = False
     if not is_file_url(ireq.link):
-        unpack_url(
-            ireq.link, ireq.source_dir, kwargs["download_dir"],
-            only_download=ireq.is_wheel, session=session,
-            hashes=ireq.hashes(True), progress_bar=False,
-        )
+        unpack_url(ireq.link, ireq.source_dir, kwargs["download_dir"], **unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
+        kwargs["session"] = finder.session
         reqset = RequirementSet(**kwargs)
         ireq.is_direct = True
-        reqset.add(ireq)
         builder = WheelBuilder(reqset, finder)
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:

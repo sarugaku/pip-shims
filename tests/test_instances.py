@@ -327,7 +327,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
         ireq.is_direct = True
         reqset.add(ireq)
         builder = WheelBuilder(reqset, finder)
-        output_file = builder._build_one(ireq, output_dir)
+        output_file = builder._build_one(ireq, output_dir.strpath)
     else:
         kwargs.update({"progress_bar": "off", "build_isolation": False})
         wheel_cache = kwargs.pop("wheel_cache")
@@ -336,5 +336,5 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 kwargs["req_tracker"] = req_tracker
             preparer = RequirementPreparer(**kwargs)
             builder = WheelBuilder(finder, preparer, wheel_cache)
-            output_file = builder._build_one(ireq, output_dir)
+            output_file = builder._build_one(ireq, output_dir.strpath)
     assert output_file, output_file

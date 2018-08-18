@@ -25,8 +25,8 @@ parsed_pip_version = _parse(pip_version)
 
 def is_valid(path_info_tuple):
     if (
-        path_info_tuple.start_version >= parsed_pip_version
-        and path_info_tuple.end_version <= parsed_pip_version
+        path_info_tuple.start_version <= parsed_pip_version
+        and path_info_tuple.end_version >= parsed_pip_version
     ):
         return 1
     return 0
@@ -100,7 +100,7 @@ def pip_import(import_name, *module_paths):
 parse_version = pip_import("parse_version", "index.parse_version", "7", "9999")
 _strip_extras = pip_import("_strip_extras", "req.req_install._strip_extras", "7", "9999")
 cmdoptions = pip_import(
-    "cmdoptions", ("cli.cmdoptions", "18.1", "9999"), ("cmdoptions", "7.0.0", "18.0"),
+    "", ("cli.cmdoptions", "18.1", "9999"), ("cmdoptions", "7.0.0", "18.0"),
 )
 Command = pip_import("Command",
     ("cli.base_command.Command", "18.1", "9999"),
@@ -152,7 +152,7 @@ url_to_path = pip_import("url_to_path", "download.url_to_path", "7.0.0", "9999")
 USER_CACHE_DIR = pip_import("USER_CACHE_DIR", "locations.USER_CACHE_DIR", "7.0.0", "9999")
 VcsSupport = pip_import("VcsSupport", "vcs.VcsSupport", "7.0.0", "9999")
 Wheel = pip_import("Wheel", "wheel.Wheel", "7.0.0", "9999")
-WheelCache = pip_import("WheelCache", ("cache.WheelCache", "10.0.0", "9999"), ("cache.WheelCache", "7", "9.0.3"))
+WheelCache = pip_import("WheelCache", ("cache.WheelCache", "10.0.0", "9999"), ("wheel.WheelCache", "7", "9.0.3"))
 WheelBuilder = pip_import("WheelBuilder", "wheel.WheelBuilder", "7.0.0", "9999")
 
 

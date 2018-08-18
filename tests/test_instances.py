@@ -281,7 +281,6 @@ def test_wheel():
 def test_wheelbuilder(tmpdir, PipCommand):
     output_dir = tmpdir.join("output")
     output_dir.mkdir()
-    reqset = RequirementSet()
     pip_command = PipCommand()
     pip_command.parser.add_option_group(
         make_option_group(index_group, pip_command.parser)

@@ -312,7 +312,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "wheel_download_dir": wheel_download_dir.strpath,
         "wheel_cache": wheel_cache,
     }
-    ireq = InstallRequirement.from_editable("git+https://github.com/benjaminp/six.git@1.11.0#egg=six")
+    ireq = InstallRequirement.from_editable("git+https://github.com/urllib3/urllib3@1.23#egg=urllib3")
     ireq.populate_link(finder, False, False)
     ireq.ensure_has_source_dir(kwargs["src_dir"])
     # Ensure the remote artifact is downloaded locally. For wheels, it is

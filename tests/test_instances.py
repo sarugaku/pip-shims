@@ -325,6 +325,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
         unpack_url(ireq.link, ireq.source_dir, kwargs["download_dir"], **unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
+        kwargs["session"] = finder.session
         reqset = RequirementSet(**kwargs)
         ireq.is_direct = True
         reqset.add(ireq)

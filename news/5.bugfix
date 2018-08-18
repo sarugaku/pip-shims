@@ -1,1 +1,0 @@
-Fixed a bug which caused failures in the detection and import on pip version 9 and below when using modutils.

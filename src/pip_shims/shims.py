@@ -123,7 +123,8 @@ class _shims(object):
         if not isinstance(module_paths, list):
             module_paths = [module_paths]
         prefix_order = [pth.format(base_path) for pth in ["{0}._internal", "{0}"]]
-        if self._parse(self.pip_version) < self._parse(self.CURRENT_PIP_VERSION):
+        # Pip 10 introduced the internal api division
+        if self._parse(self.pip_version) < self._parse("10.0.0"):
             prefix_order = reversed(prefix_order)
         paths = sorted(module_paths, key=self.is_valid, reverse=True)
         search_order = [

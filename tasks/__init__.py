@@ -144,15 +144,14 @@ def release(ctx, type_, repo, prebump=PREBUMP):
 
 @invoke.task
 def build_docs(ctx):
-    from pip_shims import __version__ as pip_shims_version
-    _current_version = parver.Version.parse(pip_shims_version)
-    minor = [str(i) for i in _current_version.release[:2]]
+    _current_version = _read_version()
+    minor = [str(i) for i in parver.Version.parse(_current_version).release[:2]]
     docs_folder = (_get_git_root(ctx) / 'docs').as_posix()
     if not docs_folder.endswith('/'):
         docs_folder = '{0}/'.format(docs_folder)
     args = ["--ext-autodoc", "--ext-viewcode", "-o", docs_folder]
     args.extend(["-A", "'Dan Ryan <dan@danryan.co>'"])
-    args.extend(["-R", str(_current_version)])
+    args.extend(["-R", _current_version])
     args.extend(["-V", ".".join(minor)])
     args.extend(["-e", "-M", "-F", f"src/{PACKAGE_NAME}"])
     print("Building docs...")

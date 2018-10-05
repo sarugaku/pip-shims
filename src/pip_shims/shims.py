@@ -36,6 +36,12 @@ class _shims(object):
         self.pip_version = getattr(self._modules["pip"], "__version__")
         self.parsed_pip_version = _parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
+        self._moves = {
+            "InstallRequirement": {
+                "from_editable": "install_req_from_editable",
+                "from_line": "install_req_from_line",
+            }
+        }
         self._locations = {
             "parse_version": ("index.parse_version", "7", "9999"),
             "_strip_extras": (
@@ -56,7 +62,10 @@ class _shims(object):
             ),
             "DistributionNotFound": ("exceptions.DistributionNotFound", "7.0.0", "9999"),
             "FAVORITE_HASH": ("utils.hashes.FAVORITE_HASH", "7.0.0", "9999"),
-            "FormatControl": ("index.FormatControl", "7.0.0", "9999"),
+            "FormatControl": (
+                ("models.format_control.FormatControl", "18.1", "9999"),
+                ("index.FormatControl", "7.0.0", "18.0"),
+            ),
             "get_installed_distributions": (
                 ("utils.misc.get_installed_distributions", "10", "9999"),
                 ("utils.get_installed_distributions", "7", "9.0.3")
@@ -66,6 +75,12 @@ class _shims(object):
                 ("cmdoptions.index_group", "7.0.0", "18.0")
             ),
             "InstallRequirement": ("req.req_install.InstallRequirement", "7.0.0", "9999"),
+            "install_req_from_editable": (
+                "req.constructors.install_req_from_editable", "7.0.0", "9999"
+            ),
+            "install_req_from_line": (
+                "req.constructors.install_req_from_line", "7.0.0", "9999"
+            ),
             "is_archive_file": ("download.is_archive_file", "7.0.0", "9999"),
             "is_file_url": ("download.is_file_url", "7.0.0", "9999"),
             "unpack_url": ("download.unpack_url", "7.0.0", "9999"),
@@ -104,14 +119,71 @@ class _shims(object):
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
         }
 
+    def _ensure_method(self, cls, classname, method_name, function):
+        if getattr(cls, method_name, None):
+            return cls
+        type_ = type(
+            classname,
+            (cls,),
+            {method_name: function},
+        )
+        return type_
+
+    def _get_module_paths(self, module, base_path=None):
+        if not base_path:
+            base_path = self.BASE_IMPORT_PATH
+        module = self._locations[module]
+        if not isinstance(next(iter(module)), (tuple, list)):
+            module_paths = self.get_pathinfo(module)
+        else:
+            module_paths = [self.get_pathinfo(pth) for pth in self._locations[module]]
+        return self.sort_paths(module_paths, base_path)
+
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")
         contextmanagers = super(_shims, self).__getattribute__("_contextmanagers")
-        if args and args[0] in locations:
-            imported = self._import(locations[args[0]])
-            if not imported and args[0] in contextmanagers:
-                return self.nullcontext
-            return imported
+        moves = super(_shims, self).__getattribute__("_moves")
+        if args:
+            module_paths = self._get_module_paths(args[0])
+            modules_with_packages = list(filter(
+                None, [(m, pkg) for m, pkg in map(self.get_package, module_paths)]
+            ))
+            moved = [
+                (base, package) for base, package in modules_with_packages
+                if package in moves.keys()
+            ]
+            moved_package = None
+            if moved:
+                moved_package = moved[0]
+            if moved_package:
+                import vistir
+                old_base, old_target = moved_package
+                old_import = self._import(locations[old_target])
+                mapped_imports = sorted(set([
+                    (method, new_location) for method, new_location
+                    in moves[old_target].items()
+                ]))
+
+                new_imports = list(filter(None, [
+                    self._import(locations[new_location[1]])
+                    for new_location in mapped_imports
+                ]))
+                imported = old_import
+                print(new_imports)
+                for i, _import in enumerate(new_imports):
+                    if getattr(old_import, "__class__", "") == type:
+                        @classmethod
+                        def _new_method(cls, name, **kwargs):
+                            return _import(name, **kwargs)
+                        imported = self._ensure_method(old_import, old_target, mapped_imports[i][0], _new_method)
+                        self._modules[mapped_imports[i][1]] = imported
+                if imported:
+                    return imported
+            if args[0] in locations:
+                imported = self._import(locations[args[0]])
+                if not imported and args[0] in contextmanagers:
+                    return self.nullcontext
+                return imported
         return super(_shims, self).__getattribute__(*args, **kwargs)
 
     def is_valid(self, path_info_tuple):

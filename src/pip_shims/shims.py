@@ -108,6 +108,7 @@ class _shims(object):
             imported = self._import(locations[args[0]])
             if not imported and args[0] in contextmanagers:
                 return self.nullcontext
+            return imported
         return super(_shims, self).__getattribute__(*args, **kwargs)
 
     def is_valid(self, path_info_tuple):

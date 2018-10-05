@@ -19,5 +19,6 @@ module.__dict__.update({
     '__path__': __path__,
     '__doc__': __doc__,
     '__all__': module.__all__ + ['shims',],
-    '__version__': __version__
+    '__version__': __version__,
+    '__name__': __name__
 })

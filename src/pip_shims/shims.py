@@ -191,4 +191,5 @@ module.__dict__.update({
     '__package__': __package__,
     '__doc__': __doc__,
     '__all__': module.__all__,
+    '__name__': __name__
 })

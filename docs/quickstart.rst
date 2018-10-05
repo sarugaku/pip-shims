@@ -41,7 +41,7 @@ Install from `PyPI`_:
 
   ::
 
-    $ pipenv install --pre pip-shims
+    $ pipenv install pip-shims
 
 Install from `Github`_:
 
@@ -109,6 +109,7 @@ index              FormatControl
 utils.misc         get_installed_distributions utils
 cli.cmdoptions     index_group                 cmdoptions
 req.req_install    InstallRequirement
+req.req_uninstall  UninstallPathSet
 download           is_archive_file
 download           is_file_url
 utils.misc         is_installable_dir          utils

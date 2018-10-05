@@ -1,0 +1,1 @@
+Added a shim for ``pip._internal.req.req_uninstall.UninstallPathSet``.

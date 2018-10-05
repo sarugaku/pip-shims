@@ -14,6 +14,7 @@ flake8 = '*'
 rope = "*"
 pytest-cov = "*"
 pytest-timeout = "*"
+isort = "*"
 
 [scripts]
 release = 'inv release'

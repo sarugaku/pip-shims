@@ -3,22 +3,8 @@ sudo: false
 cache: pip
 dist: trusty
 
-env:
-- PIP="pip==9.0.3"
-- PIP="pip==10.0.1"
-- PIP="pip==18.0"
-- PIP="pip==18.1"
-- PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
 
 matrix:
-  include:
-    - python: "3.4"
-    - python: "3.7"
-      dist: xenial
-      sudo: required
-    - python: "3.6"
-    - python: "2.7"
-    - python: "3.5"
   fast_finish: true
   allow_failures:
   - python: "3.4"
@@ -33,6 +19,48 @@ script:
 jobs:
   include:
     - stage: test
+    - env:
+       PIP="pip==9.0.3"
+    - python: "3.4"
+    - python: "3.7"
+      dist: xenial
+      sudo: required
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - stage: test
+    - env:
+       PIP="pip==10.0.1"
+    - python: "3.4"
+    - python: "3.7"
+      dist: xenial
+      sudo: required
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - stage: test
+    - env:
+       PIP="pip==18.0"
+    - python: "3.4"
+    - python: "3.7"
+      dist: xenial
+      sudo: required
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - stage: test
+    - env:
+       PIP="pip==18.1"
+    - python: "3.4"
+    - python: "3.7"
+      dist: xenial
+      sudo: required
+    - python: "3.6"
+    - python: "2.7"
+    - python: "3.5"
+    - stage: test
+    - env:
+       PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
     - python: "3.4"
     - python: "3.7"
       dist: xenial

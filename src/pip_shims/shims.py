@@ -171,8 +171,7 @@ class _shims(object):
         return self._import(*args, **kwargs)
 
     @contextmanager
-    @classmethod
-    def nullcontext(cls):
+    def nullcontext(self, *args, **kwargs):
         try:
             yield
         finally:

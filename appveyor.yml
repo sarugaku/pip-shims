@@ -46,7 +46,7 @@ environment:
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
-  - "python -m pip install --upgrade pip"
+  - "python -m pip install --upgrade %PIP%"
   - "python -m pip install -e .[tests]"
 
 build: off

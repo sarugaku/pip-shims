@@ -1,0 +1,1 @@
+Fixed a bug which caused usage of incorrect location for ``_strip_extras``.

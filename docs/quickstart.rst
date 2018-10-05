@@ -99,7 +99,7 @@ Available Shims
 ================== =========================== ================
 Import Path        Import Name                 Former Path
 ================== =========================== ================
-req.req_install    _strip_extras
+req.constructors   _strip_extras               req.req_install
 cli                cmdoptions                  cmdoptions
 cli.base_command   Command                     basecommand
 cli.parser         ConfigOptionParser          baseparser

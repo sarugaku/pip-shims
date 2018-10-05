@@ -3,21 +3,22 @@ sudo: false
 cache: pip
 dist: trusty
 
-python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-  - "3.7"
-
 env:
-  - PIP="pip==9.0.3"
-  - PIP="pip==10.0.1"
-  - PIP="pip==18.0"
-  - PIP="pip==18.1"
-  - PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
+- PIP="pip==9.0.3"
+- PIP="pip==10.0.1"
+- PIP="pip==18.0"
+- PIP="pip==18.1"
+- PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
 
 matrix:
+  include:
+    - python: "3.7"
+      dist: xenial
+      sudo: required
+    - python: "2.7"
+    - python: "3.4"
+    - python: "3.5"
+    - python: "3.6"
   fast_finish: true
   allow_failures:
   - python: "3.4"

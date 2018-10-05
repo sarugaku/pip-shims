@@ -1,3 +1,14 @@
+0.2.0 (2018-10-05)
+==================
+
+Features
+--------
+
+- Added a shim for ``pip._internal.req.req_uninstall.UninstallPathSet``.  `#10 <https://github.com/sarugaku/pip-shims/issues/10>`_
+  
+- Made all module loading lazy by replacing modules dynamically at runtime.  `#9 <https://github.com/sarugaku/pip-shims/issues/9>`_
+
+
 0.1.2 (2018-08-18)
 ==================
 

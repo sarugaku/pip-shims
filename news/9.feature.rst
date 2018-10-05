@@ -1,1 +1,0 @@
-Made all module loading lazy by replacing modules dynamically at runtime.

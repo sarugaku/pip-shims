@@ -7,7 +7,7 @@ import sys
 
 
 class _shims(object):
-    CURRENT_PIP_VERSION  = "18.0"
+    CURRENT_PIP_VERSION  = "18.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
 
@@ -34,7 +34,7 @@ class _shims(object):
         self._modules = {}
         self._modules["pip"] = importlib.import_module("pip")
         self.pip_version = getattr(self._modules["pip"], "__version__")
-        self.parsed_pip_version = _parse(self.pip_version)
+        self.parsed_pip_version = self._parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
         self._moves = {
             "InstallRequirement": {
@@ -143,7 +143,7 @@ class _shims(object):
         locations = super(_shims, self).__getattribute__("_locations")
         contextmanagers = super(_shims, self).__getattribute__("_contextmanagers")
         moves = super(_shims, self).__getattribute__("_moves")
-        if args:
+        if args[0] in locations:
             module_paths = self._get_module_paths(args[0])
             modules_with_packages = list(filter(
                 None, [(m, pkg) for m, pkg in map(self.get_package, module_paths)]
@@ -169,7 +169,6 @@ class _shims(object):
                     for new_location in mapped_imports
                 ]))
                 imported = old_import
-                print(new_imports)
                 for i, _import in enumerate(new_imports):
                     if getattr(old_import, "__class__", "") == type:
                         @classmethod
@@ -179,7 +178,7 @@ class _shims(object):
                         self._modules[mapped_imports[i][1]] = imported
                 if imported:
                     return imported
-            if args[0] in locations:
+            else:
                 imported = self._import(locations[args[0]])
                 if not imported and args[0] in contextmanagers:
                     return self.nullcontext

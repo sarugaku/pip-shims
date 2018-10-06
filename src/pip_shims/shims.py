@@ -38,7 +38,10 @@ class _shims(object):
         self._contextmanagers = ("RequirementTracker",)
         self._locations = {
             "parse_version": ("index.parse_version", "7", "9999"),
-            "_strip_extras": ("req.req_install._strip_extras", "7", "9999"),
+            "_strip_extras": (
+                ("req.req_install._strip_extras", "7", "18.0"),
+                ("req.constructors._strip_extras", "18.1", "9999"),
+            ),
             "cmdoptions": (
                 ("cli.cmdoptions", "18.1", "9999"),
                 ("cmdoptions", "7.0.0", "18.0")

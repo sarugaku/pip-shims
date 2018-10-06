@@ -1,9 +1,0 @@
-Added shims for the following:
-  * ``InstallationError``
-  * ``UninstallationError``
-  * ``DistributionNotFound``
-  * ``RequirementsFileParseError``
-  * ``BestVersionAlreadyInstalled``
-  * ``BadCommand``
-  * ``CommandError``
-  * ``PreviousBuildDirError``

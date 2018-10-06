@@ -1,3 +1,26 @@
+0.3.1 (2018-10-06)
+==================
+
+No significant changes.
+
+
+0.3.1 (2018-10-06)
+==================
+
+Features
+--------
+
+- Added shims for the following:
+    * ``InstallationError``
+    * ``UninstallationError``
+    * ``DistributionNotFound``
+    * ``RequirementsFileParseError``
+    * ``BestVersionAlreadyInstalled``
+    * ``BadCommand``
+    * ``CommandError``
+    * ``PreviousBuildDirError``  `#19 <https://github.com/sarugaku/pip-shims/issues/19>`_
+
+
 0.3.0 (2018-10-06)
 ==================
 

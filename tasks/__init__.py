@@ -114,7 +114,7 @@ def release(ctx, type_, repo, prebump=PREBUMP):
     # Needs to happen before Towncrier deletes fragment files.
     tag_content = _render_log()
 
-    ctx.run('towncrier')
+    # ctx.run('towncrier')
 
     ctx.run(f'git commit -am "Release {version}"')
 

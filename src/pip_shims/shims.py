@@ -206,22 +206,22 @@ class _shims(object):
             return imported
         return
 
+    def _check_moved_methods(self, search_pth, moves):
+        module_paths = [
+            self.get_package(pth) for pth in self._get_module_paths(search_pth)
+        ]
+        moved_methods = [
+            (base, target_cls) for base, target_cls
+            in module_paths if target_cls in moves
+        ]
+        return next(iter(moved_methods), None)
+
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")
         contextmanagers = super(_shims, self).__getattribute__("_contextmanagers")
         moves = super(_shims, self).__getattribute__("_moves")
         if args[0] in locations:
-            module_paths = self._get_module_paths(args[0])
-            modules_with_packages = list(filter(
-                None, [(m, pkg) for m, pkg in map(self.get_package, module_paths)]
-            ))
-            moved = [
-                (base, package) for base, package in modules_with_packages
-                if package in moves.keys()
-            ]
-            moved_package = None
-            if moved:
-                moved_package = moved[0]
+            moved_package = self._check_moved_methods(args[0], moves)
             if moved_package:
                 imported = self._import_moved_module(moved_package)
                 if imported:

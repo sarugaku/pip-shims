@@ -38,7 +38,17 @@ from pip_shims import (
     WheelBuilder,
     install_req_from_editable,
     install_req_from_line,
-    FrozenRequirement
+    FrozenRequirement,
+    DistributionNotFound,
+    PipError,
+    InstallationError,
+    UninstallationError,
+    DistributionNotFound,
+    RequirementsFileParseError,
+    BestVersionAlreadyInstalled,
+    BadCommand,
+    CommandError,
+    PreviousBuildDirError,
 )
 import pytest
 import six

@@ -88,7 +88,7 @@ class _shims(object):
                 ("cmdoptions.index_group", "7.0.0", "18.0")
             ),
             "InstallRequirement": ("req.req_install.InstallRequirement", "7.0.0", "9999"),
-            "InstallationError" ("exceptions.InstallationError", "7.0.0", "9999"),
+            "InstallationError": ("exceptions.InstallationError", "7.0.0", "9999"),
             "UninstallationError": ("exceptions.UninstallationError", "7.0.0", "9999"),
             "DistributionNotFound": ("exceptions.DistributionNotFound", "7.0.0", "9999"),
             "RequirementsFileParseError": ("exceptions.RequirementsFileParseError", "7.0.0", "9999"),

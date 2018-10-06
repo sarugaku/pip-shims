@@ -181,7 +181,7 @@ def test_resolution(tmpdir, PipCommand):
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
     ireq2 = install_req_from_line("requests>=2.18")
-    assert ireq == ireq2
+    assert str(ireq) == str(ireq2)
     requests_candidates = finder.find_all_candidates(ireq.name)
     candidates = sorted(
         [

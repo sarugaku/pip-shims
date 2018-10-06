@@ -143,6 +143,7 @@ class _shims(object):
 
         for method_name, fn in methods:
             new_functions[method_name] = classmethod(BaseFunc(fn, method_name))
+        classname = classname.encode(sys.getdefaultencoding())
         type_ = type(
             classname,
             (cls,),

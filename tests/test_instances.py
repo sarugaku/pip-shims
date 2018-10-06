@@ -116,7 +116,8 @@ def test_link_and_ireq():
     ireq = InstallRequirement.from_editable(url)
     ireq2 = install_req_from_editable(url)
     assert ireq.link == link
-    assert ireq2.link == link
+    if ireq2:
+        assert ireq2.link == link
 
 
 def test_path_and_url():
@@ -181,7 +182,8 @@ def test_resolution(tmpdir, PipCommand):
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
     ireq2 = install_req_from_line("requests>=2.18")
-    assert str(ireq) == str(ireq2)
+    if ireq2:
+        assert str(ireq) == str(ireq2)
     requests_candidates = finder.find_all_candidates(ireq.name)
     candidates = sorted(
         [

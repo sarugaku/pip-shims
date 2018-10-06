@@ -36,8 +36,9 @@ class _shims(object):
         self._parse = _parse
         self.get_package = get_package
         self.STRING_TYPES = STRING_TYPES
-        self._modules = {}
-        self._modules["pip"] = importlib.import_module("pip")
+        self._modules = {
+            "pip": importlib.import_module("pip"),
+        }
         self.pip_version = getattr(self._modules["pip"], "__version__")
         self.parsed_pip_version = self._parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
@@ -85,10 +86,12 @@ class _shims(object):
             ),
             "InstallRequirement": ("req.req_install.InstallRequirement", "7.0.0", "9999"),
             "install_req_from_editable": (
-                "req.constructors.install_req_from_editable", "7.0.0", "9999"
+                ("req.constructors.install_req_from_editable", "18.1", "9999"),
+                ("req.req_install.InstallRequirement.from_editable", "7.0.0", "18.0")
             ),
             "install_req_from_line": (
-                "req.constructors.install_req_from_line", "7.0.0", "9999"
+                ("req.constructors.install_req_from_line", "18.1", "9999"),
+                ("req.req_install.InstallRequirement.from_line", "7.0.0", "18.0")
             ),
             "is_archive_file": ("download.is_archive_file", "7.0.0", "9999"),
             "is_file_url": ("download.is_file_url", "7.0.0", "9999"),

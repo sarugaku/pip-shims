@@ -95,20 +95,25 @@ Available Shims
 ****************
 
 **pip-shims** provides the following compatibility shims:
+models             FormatControl               index
+req.constructors   install_req_from_line       req.req_install.InstallRequirement
+req.constructors   install_req_from_editable   req.req_install.InstallRequirement
 
-================== =========================== ================
+================== =========================== ===================================
 Import Path        Import Name                 Former Path
-================== =========================== ================
+================== =========================== ===================================
 req.constructors   _strip_extras               req.req_install
 cli                cmdoptions                  cmdoptions
 cli.base_command   Command                     basecommand
 cli.parser         ConfigOptionParser          baseparser
 exceptions         DistributionNotFound
 utils.hashes       FAVORITE_HASH
-index              FormatControl
+models             FormatControl               index
 utils.misc         get_installed_distributions utils
 cli.cmdoptions     index_group                 cmdoptions
 req.req_install    InstallRequirement
+req.constructors   install_req_from_line       req.req_install.InstallRequirement
+req.constructors   install_req_from_editable   req.req_install.InstallRequirement
 req.req_uninstall  UninstallPathSet
 download           is_archive_file
 download           is_file_url
@@ -123,6 +128,7 @@ download           path_to_url
 __version__        pip_version
 exceptions         PipError
 operations.prepare RequirementPreparer
+operations.freeze  FrozenRequirement           <`__init__`>
 req.req_set        RequirementSet
 req.req_tracker    RequirementTracker
 resolve            Resolver
@@ -134,4 +140,4 @@ vcs                VcsSupport
 wheel              Wheel
 wheel              WheelBuilder
 cache              WheelCache                  wheel
-================== =========================== ================
+================== =========================== ===================================

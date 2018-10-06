@@ -6,8 +6,13 @@ import os
 import sys
 
 
+import six
+six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))
+from six.moves import Callable
+
+
 class _shims(object):
-    CURRENT_PIP_VERSION  = "18.0"
+    CURRENT_PIP_VERSION  = "18.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
 
@@ -31,11 +36,18 @@ class _shims(object):
         self._parse = _parse
         self.get_package = get_package
         self.STRING_TYPES = STRING_TYPES
-        self._modules = {}
-        self._modules["pip"] = importlib.import_module("pip")
+        self._modules = {
+            "pip": importlib.import_module("pip"),
+        }
         self.pip_version = getattr(self._modules["pip"], "__version__")
-        self.parsed_pip_version = _parse(self.pip_version)
+        self.parsed_pip_version = self._parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
+        self._moves = {
+            "InstallRequirement": {
+                "from_editable": "install_req_from_editable",
+                "from_line": "install_req_from_line",
+            }
+        }
         self._locations = {
             "parse_version": ("index.parse_version", "7", "9999"),
             "_strip_extras": (
@@ -56,7 +68,14 @@ class _shims(object):
             ),
             "DistributionNotFound": ("exceptions.DistributionNotFound", "7.0.0", "9999"),
             "FAVORITE_HASH": ("utils.hashes.FAVORITE_HASH", "7.0.0", "9999"),
-            "FormatControl": ("index.FormatControl", "7.0.0", "9999"),
+            "FormatControl": (
+                ("models.format_control.FormatControl", "18.1", "9999"),
+                ("index.FormatControl", "7.0.0", "18.0"),
+            ),
+            "FrozenRequirement": (
+                ("FrozenRequirement", "7.0.0", "9.0.3"),
+                ("operations.freeze.FrozenRequirement", "10.0.0", "9999")
+            ),
             "get_installed_distributions": (
                 ("utils.misc.get_installed_distributions", "10", "9999"),
                 ("utils.get_installed_distributions", "7", "9.0.3")
@@ -66,6 +85,14 @@ class _shims(object):
                 ("cmdoptions.index_group", "7.0.0", "18.0")
             ),
             "InstallRequirement": ("req.req_install.InstallRequirement", "7.0.0", "9999"),
+            "install_req_from_editable": (
+                ("req.constructors.install_req_from_editable", "18.1", "9999"),
+                ("req.req_install.InstallRequirement.from_editable", "7.0.0", "18.0")
+            ),
+            "install_req_from_line": (
+                ("req.constructors.install_req_from_line", "18.1", "9999"),
+                ("req.req_install.InstallRequirement.from_line", "7.0.0", "18.0")
+            ),
             "is_archive_file": ("download.is_archive_file", "7.0.0", "9999"),
             "is_file_url": ("download.is_file_url", "7.0.0", "9999"),
             "unpack_url": ("download.unpack_url", "7.0.0", "9999"),
@@ -104,14 +131,111 @@ class _shims(object):
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
         }
 
+    def _ensure_methods(self, cls, classname, *methods):
+        method_names = [m[0] for m in methods]
+        if all(getattr(cls, m, None) for m in method_names):
+            return cls
+        new_functions = {}
+        class BaseFunc(Callable):
+            def __init__(self, func_base, name, *args, **kwargs):
+                self.func = func_base
+                self.__name__ = self.__qualname__ = name
+
+            def __call__(self, cls, *args, **kwargs):
+                return self.func(*args, **kwargs)
+
+        for method_name, fn in methods:
+            new_functions[method_name] = classmethod(BaseFunc(fn, method_name))
+        if six.PY2:
+            classname = classname.encode(sys.getdefaultencoding())
+        type_ = type(
+            classname,
+            (cls,),
+            new_functions
+        )
+        return type_
+
+    def _get_module_paths(self, module, base_path=None):
+        if not base_path:
+            base_path = self.BASE_IMPORT_PATH
+        module = self._locations[module]
+        if not isinstance(next(iter(module)), (tuple, list)):
+            module_paths = self.get_pathinfo(module)
+        else:
+            module_paths = [self.get_pathinfo(pth) for pth in module]
+        return self.sort_paths(module_paths, base_path)
+
+    def _get_remapped_methods(self, moved_package):
+        original_base, original_target = moved_package
+        original_import = self._import(self._locations[original_target])
+        old_to_new = {}
+        new_to_old = {}
+        for method_name, new_method_name in self._moves.get(original_target, {}).items():
+            module_paths = self._get_module_paths(new_method_name)
+            target = next(iter(
+                sorted(set([
+                    tgt for mod, tgt in map(self.get_package, module_paths)
+                ]))), None
+            )
+            old_to_new[method_name] = {
+                "target": target,
+                "name": new_method_name,
+                "location": self._locations[new_method_name],
+                "module": self._import(self._locations[new_method_name])
+            }
+            new_to_old[new_method_name] = {
+                "target": original_target,
+                "name": method_name,
+                "location": self._locations[original_target],
+                "module": original_import
+            }
+        return (old_to_new, new_to_old)
+
+    def _import_moved_module(self, moved_package):
+        old_to_new, new_to_old = self._get_remapped_methods(moved_package)
+        imported = None
+        method_map = []
+        new_target = None
+        for old_method, remapped in old_to_new.items():
+            new_name = remapped["name"]
+            new_target = new_to_old[new_name]["target"]
+            if not imported:
+                imported = self._modules[new_target] = new_to_old[new_name]["module"]
+            method_map.append((old_method, remapped["module"]))
+        if getattr(imported, "__class__", "") == type:
+            imported = self._ensure_methods(
+                imported, new_target, *method_map
+            )
+        self._modules[new_target] = imported
+        if imported:
+            return imported
+        return
+
+    def _check_moved_methods(self, search_pth, moves):
+        module_paths = [
+            self.get_package(pth) for pth in self._get_module_paths(search_pth)
+        ]
+        moved_methods = [
+            (base, target_cls) for base, target_cls
+            in module_paths if target_cls in moves
+        ]
+        return next(iter(moved_methods), None)
+
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")
         contextmanagers = super(_shims, self).__getattribute__("_contextmanagers")
-        if args and args[0] in locations:
-            imported = self._import(locations[args[0]])
-            if not imported and args[0] in contextmanagers:
-                return self.nullcontext
-            return imported
+        moves = super(_shims, self).__getattribute__("_moves")
+        if args[0] in locations:
+            moved_package = self._check_moved_methods(args[0], moves)
+            if moved_package:
+                imported = self._import_moved_module(moved_package)
+                if imported:
+                    return imported
+            else:
+                imported = self._import(locations[args[0]])
+                if not imported and args[0] in contextmanagers:
+                    return self.nullcontext
+                return imported
         return super(_shims, self).__getattribute__(*args, **kwargs)
 
     def is_valid(self, path_info_tuple):
@@ -198,5 +322,5 @@ module.__dict__.update({
     '__package__': __package__,
     '__doc__': __doc__,
     '__all__': module.__all__,
-    '__name__': __name__
+    '__name__': __name__,
 })

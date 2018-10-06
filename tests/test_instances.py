@@ -35,9 +35,13 @@ from pip_shims import (
     VcsSupport,
     Wheel,
     WheelCache,
-    WheelBuilder
+    WheelBuilder,
+    install_req_from_editable,
+    install_req_from_line,
+    FrozenRequirement
 )
 import pytest
+import six
 import sys
 import textwrap
 
@@ -89,7 +93,15 @@ def test_favorite_hash():
 def test_format_control():
     from collections import namedtuple
 
-    fc = namedtuple("FormatControl", "no_binary, only_binary")
+    if issubclass(FormatControl, tuple):
+        # through pip 18.0 this object was a named tuple
+        fc = namedtuple("FormatControl", "no_binary, only_binary")
+    else:
+        # after pip 18.0 this has its own model
+        clsname = "fc"
+        if six.PY2:
+            clsname = clsname.encode(sys.getdefaultencoding())
+        fc = type(clsname, (FormatControl,), {})
     assert fc(None, None) == FormatControl(None, None)
 
 
@@ -102,6 +114,9 @@ def test_link_and_ireq():
     url = "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
     link = Link(url)
     ireq = InstallRequirement.from_editable(url)
+    if install_req_from_editable:
+        ireq2 = install_req_from_editable(url)
+        assert ireq2.link == link
     assert ireq.link == link
 
 
@@ -166,6 +181,9 @@ def test_resolution(tmpdir, PipCommand):
         session=session,
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
+    if install_req_from_line:
+        ireq2 = install_req_from_line("requests>=2.18")
+        assert str(ireq) == str(ireq2)
     requests_candidates = finder.find_all_candidates(ireq.name)
     candidates = sorted(
         [
@@ -260,6 +278,13 @@ def test_abstract_dist():
 def test_safe_file_cache():
     sfc = SafeFileCache(directory=USER_CACHE_DIR)
     assert sfc.__class__.__name__ == "SafeFileCache"
+
+
+def test_frozen_req():
+    import pkg_resources
+    req = pkg_resources.Requirement.parse("requests==2.19.1")
+    fr = FrozenRequirement("requests", req, False)
+    assert fr is not None
 
 
 def test_wheel_cache():

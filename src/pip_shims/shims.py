@@ -136,8 +136,55 @@ class _shims(object):
         if not isinstance(next(iter(module)), (tuple, list)):
             module_paths = self.get_pathinfo(module)
         else:
-            module_paths = [self.get_pathinfo(pth) for pth in self._locations[module]]
+            module_paths = [self.get_pathinfo(pth) for pth in module]
         return self.sort_paths(module_paths, base_path)
+
+    def _get_remapped_methods(self, moved_package):
+        original_base, original_target = moved_package
+        original_import = self._import(self._locations[original_target])
+        old_to_new = {}
+        new_to_old = {}
+        for method_name, new_method_name in self._moves.get(original_target, {}).items():
+            module_paths = self._get_module_paths(new_method_name)
+            target = next(iter(
+                sorted(set([
+                    (mod, tgt) for mod, tgt in map(self.get_package, module_paths)
+                ]))), None
+            )
+            old_to_new[method_name] = {
+                "target": target,
+                "name": new_method_name,
+                "location": self._locations[new_method_name],
+                "module": self._import(self._locations[new_method_name])
+
+            }
+            new_to_old[new_method_name] = {
+                "target": original_target,
+                "name": method_name,
+                "location": self._locations[original_target],
+                "module": original_import
+            }
+        return (old_to_new, new_to_old)
+
+    def _import_moved_module(self, moved_package):
+        old_to_new, new_to_old = self._get_remapped_methods(moved_package)
+        imported = None
+        for old_method, remapped in old_to_new.items():
+            new_name = remapped["name"]
+            imported = new_to_old[new_name]["module"]
+            if getattr(imported, "__class__", "") == type:
+                @classmethod
+                def _new_method(cls, name, **kwargs):
+                    return remapped["module"](name, **kwargs)
+                new_import = new_to_old[new_name]["module"]
+                new_target = new_to_old[new_name]["target"]
+                imported = self._ensure_method(
+                    new_import, new_target, old_method, _new_method
+                )
+                self._modules[new_target] = imported
+        if imported:
+            return imported
+        return
 
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")
@@ -156,26 +203,7 @@ class _shims(object):
             if moved:
                 moved_package = moved[0]
             if moved_package:
-                import vistir
-                old_base, old_target = moved_package
-                old_import = self._import(locations[old_target])
-                mapped_imports = sorted(set([
-                    (method, new_location) for method, new_location
-                    in moves[old_target].items()
-                ]))
-
-                new_imports = list(filter(None, [
-                    self._import(locations[new_location[1]])
-                    for new_location in mapped_imports
-                ]))
-                imported = old_import
-                for i, _import in enumerate(new_imports):
-                    if getattr(old_import, "__class__", "") == type:
-                        @classmethod
-                        def _new_method(cls, name, **kwargs):
-                            return _import(name, **kwargs)
-                        imported = self._ensure_method(old_import, old_target, mapped_imports[i][0], _new_method)
-                        self._modules[mapped_imports[i][1]] = imported
+                imported = self._import_moved_module(moved_package)
                 if imported:
                     return imported
             else:

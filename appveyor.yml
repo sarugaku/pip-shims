@@ -73,6 +73,11 @@ install:
         exit $LastExitCode
       }
 
+      Invoke-Expression "$py_exe -m pip install --upgrade setuptools pytest pytest-xdist pytest-timeout"
+      If ($LastExitCode -ne 0) {
+        exit $LastExitCode
+      }
+
       Invoke-Expression "$py_exe -m pip install --upgrade $pip"
       If ($LastExitCode -ne 0) {
         exit $LastExitCode

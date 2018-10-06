@@ -38,6 +38,7 @@ from pip_shims import (
     WheelBuilder
 )
 import pytest
+import six
 import sys
 import textwrap
 

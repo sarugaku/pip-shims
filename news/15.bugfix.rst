@@ -1,1 +1,0 @@
-Fixed a bug which caused ``FormatControl`` imports to fail in ``pip>=18.1``.

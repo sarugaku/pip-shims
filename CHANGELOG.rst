@@ -1,3 +1,22 @@
+0.2.1 (2018-10-06)
+==================
+
+Features
+--------
+
+- Added and exposed ``FrozenRequirement`` for consumption.  `#17 <https://github.com/sarugaku/pip-shims/issues/17>`_
+  
+
+Bug Fixes
+---------
+
+- Fixed a bug which caused usage of incorrect location for ``_strip_extras``.  `#13 <https://github.com/sarugaku/pip-shims/issues/13>`_
+  
+- Fixed a bug which caused ``FormatControl`` imports to fail in ``pip>=18.1``.  `#15 <https://github.com/sarugaku/pip-shims/issues/15>`_
+  
+- Fixed a bug which caused ``InstallRequirement.from_line`` and ``InstallRequirement.from_editable`` to fail in ``pip>=18.1``.  `#16 <https://github.com/sarugaku/pip-shims/issues/16>`_
+
+
 0.2.0 (2018-10-05)
 ==================
 

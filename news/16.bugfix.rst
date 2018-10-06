@@ -1,1 +1,0 @@
-Fixed a bug which caused ``InstallRequirement.from_line`` and ``InstallRequirement.from_editable`` to fail in ``pip>=18.1``.

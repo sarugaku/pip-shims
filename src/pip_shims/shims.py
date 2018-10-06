@@ -6,6 +6,11 @@ import os
 import sys
 
 
+import six
+six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))
+from six.moves import Callable
+
+
 class _shims(object):
     CURRENT_PIP_VERSION  = "18.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
@@ -66,6 +71,10 @@ class _shims(object):
                 ("models.format_control.FormatControl", "18.1", "9999"),
                 ("index.FormatControl", "7.0.0", "18.0"),
             ),
+            "FrozenRequirement": (
+                ("FrozenRequirement", "7.0.0", "9.0.3"),
+                ("operations.freeze.FrozenRequirement", "10.0.0", "9999")
+            ),
             "get_installed_distributions": (
                 ("utils.misc.get_installed_distributions", "10", "9999"),
                 ("utils.get_installed_distributions", "7", "9.0.3")
@@ -119,13 +128,25 @@ class _shims(object):
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
         }
 
-    def _ensure_method(self, cls, classname, method_name, function):
-        if getattr(cls, method_name, None):
+    def _ensure_methods(self, cls, classname, *methods):
+        method_names = [m[0] for m in methods]
+        if all(getattr(cls, m, None) for m in method_names):
             return cls
+        new_functions = {}
+        class BaseFunc(Callable):
+            def __init__(self, func_base, name, *args, **kwargs):
+                self.func = func_base
+                self.__name__ = self.__qualname__ = name
+
+            def __call__(self, cls, *args, **kwargs):
+                return self.func(*args, **kwargs)
+
+        for method_name, fn in methods:
+            new_functions[method_name] = classmethod(BaseFunc(fn, method_name))
         type_ = type(
             classname,
             (cls,),
-            {method_name: function},
+            new_functions
         )
         return type_
 
@@ -148,7 +169,7 @@ class _shims(object):
             module_paths = self._get_module_paths(new_method_name)
             target = next(iter(
                 sorted(set([
-                    (mod, tgt) for mod, tgt in map(self.get_package, module_paths)
+                    tgt for mod, tgt in map(self.get_package, module_paths)
                 ]))), None
             )
             old_to_new[method_name] = {
@@ -156,7 +177,6 @@ class _shims(object):
                 "name": new_method_name,
                 "location": self._locations[new_method_name],
                 "module": self._import(self._locations[new_method_name])
-
             }
             new_to_old[new_method_name] = {
                 "target": original_target,
@@ -169,19 +189,19 @@ class _shims(object):
     def _import_moved_module(self, moved_package):
         old_to_new, new_to_old = self._get_remapped_methods(moved_package)
         imported = None
+        method_map = []
+        new_target = None
         for old_method, remapped in old_to_new.items():
             new_name = remapped["name"]
-            imported = new_to_old[new_name]["module"]
-            if getattr(imported, "__class__", "") == type:
-                @classmethod
-                def _new_method(cls, name, **kwargs):
-                    return remapped["module"](name, **kwargs)
-                new_import = new_to_old[new_name]["module"]
-                new_target = new_to_old[new_name]["target"]
-                imported = self._ensure_method(
-                    new_import, new_target, old_method, _new_method
-                )
-                self._modules[new_target] = imported
+            new_target = new_to_old[new_name]["target"]
+            if not imported:
+                imported = self._modules[new_target] = new_to_old[new_name]["module"]
+            method_map.append((old_method, remapped["module"]))
+        if getattr(imported, "__class__", "") == type:
+            imported = self._ensure_methods(
+                imported, new_target, *method_map
+            )
+        self._modules[new_target] = imported
         if imported:
             return imported
         return
@@ -297,5 +317,5 @@ module.__dict__.update({
     '__package__': __package__,
     '__doc__': __doc__,
     '__all__': module.__all__,
-    '__name__': __name__
+    '__name__': __name__,
 })

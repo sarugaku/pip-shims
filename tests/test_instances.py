@@ -89,7 +89,12 @@ def test_favorite_hash():
 def test_format_control():
     from collections import namedtuple
 
-    fc = namedtuple("FormatControl", "no_binary, only_binary")
+    if issubclass(FormatControl, tuple):
+        # through pip 18.0 this object was a named tuple
+        fc = namedtuple("FormatControl", "no_binary, only_binary")
+    else:
+        # after pip 18.0 this has its own model
+        fc = type("fc", (FormatControl,), {})
     assert fc(None, None) == FormatControl(None, None)
 
 

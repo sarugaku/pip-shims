@@ -18,6 +18,34 @@ script:
 
 jobs:
   include:
+    - &test-pip181
+      stage: test-pip181
+      python: "3.6"
+      env: PIP="pip==18.1"
+    - <<: *test-pip181
+      python: "3.7"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip181
+      python: "3.5"
+    - <<: *test-pip181
+      python: "3.4"
+    - <<: *test-pip181
+      python: "2.7"
+    - &test-pipmaster
+      stage: test-pipmaster
+      python: "3.6"
+      env: PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
+    - <<: *test-pipmaster
+      python: "3.7"
+      dist: xenial
+      sudo: required
+    - <<: *test-pipmaster
+      python: "3.5"
+    - <<: *test-pipmaster
+      python: "3.4"
+    - <<: *test-pipmaster
+      python: "2.7"
     - &test-pip9
       stage: test-pip9
       python: "3.6"
@@ -59,34 +87,6 @@ jobs:
     - <<: *test-pip180
       python: "3.4"
     - <<: *test-pip180
-      python: "2.7"
-    - &test-pip181
-      stage: test-pip181
-      python: "3.6"
-      env: PIP="pip==18.1"
-    - <<: *test-pip181
-      python: "3.7"
-      dist: xenial
-      sudo: required
-    - <<: *test-pip181
-      python: "3.5"
-    - <<: *test-pip181
-      python: "3.4"
-    - <<: *test-pip181
-      python: "2.7"
-    - &test-pipmaster
-      stage: test-pipmaster
-      python: "3.6"
-      env: PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
-    - <<: *test-pipmaster
-      python: "3.7"
-      dist: xenial
-      sudo: required
-    - <<: *test-pipmaster
-      python: "3.5"
-    - <<: *test-pipmaster
-      python: "3.4"
-    - <<: *test-pipmaster
       python: "2.7"
     - stage: packaging
       python: "3.6"

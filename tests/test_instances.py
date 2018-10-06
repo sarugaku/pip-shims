@@ -95,8 +95,9 @@ def test_format_control():
         fc = namedtuple("FormatControl", "no_binary, only_binary")
     else:
         # after pip 18.0 this has its own model
+        clsname = "fc"
         if six.PY2:
-            clsname = "fc".encode(sys.getdefaultencoding())
+            clsname = clsname.encode(sys.getdefaultencoding())
         fc = type(clsname, (FormatControl,), {})
     assert fc(None, None) == FormatControl(None, None)
 

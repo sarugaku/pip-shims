@@ -56,6 +56,8 @@ install:
 
       $py_exe = join-path -path $py_path -childpath python.exe
 
+      $py_exe = $py_exe.ToString()
+
       if ( $env:PIP ) { $pip = "pip==$env:PIP" } else { $pip = "pip" }
 
       Invoke-Expression "$py_exe --version"

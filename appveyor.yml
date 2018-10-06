@@ -44,10 +44,10 @@ environment:
       PIP: "9.0.3"
 
 install:
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "python --version"
-  - "python -m pip install --upgrade %PIP%"
-  - "python -m pip install -e .[tests]"
+  - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - python --version
+  - python -m pip install --upgrade %PIP%
+  - python -m pip install -e .[tests]
 
 build: off
 

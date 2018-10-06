@@ -38,7 +38,17 @@ from pip_shims import (
     WheelBuilder,
     install_req_from_editable,
     install_req_from_line,
-    FrozenRequirement
+    FrozenRequirement,
+    DistributionNotFound,
+    PipError,
+    InstallationError,
+    UninstallationError,
+    DistributionNotFound,
+    RequirementsFileParseError,
+    BestVersionAlreadyInstalled,
+    BadCommand,
+    CommandError,
+    PreviousBuildDirError,
 )
 import pytest
 import six
@@ -80,7 +90,19 @@ def test_configparser(PipCommand):
 
 @pytest.mark.parametrize(
     "exceptionclass, baseclass",
-    [(DistributionNotFound, Exception), (PipError, Exception)],
+    [
+        (DistributionNotFound, Exception),
+        (PipError, Exception),
+        (InstallationError, Exception),
+        (UninstallationError, Exception),
+        (DistributionNotFound, Exception),
+        (RequirementsFileParseError, Exception),
+        (BestVersionAlreadyInstalled, Exception),
+        (BadCommand, Exception),
+        (CommandError, Exception),
+        (PreviousBuildDirError, Exception),
+    ],
+
 )
 def test_exceptions(exceptionclass, baseclass):
     assert issubclass(exceptionclass, baseclass)

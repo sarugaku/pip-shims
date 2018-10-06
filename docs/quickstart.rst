@@ -127,6 +127,14 @@ index              parse_version
 download           path_to_url
 __version__        pip_version
 exceptions         PipError
+exceptions         InstallationError
+exceptions         UninstallationError
+exceptions         DistributionNotFound
+exceptions         RequirementsFileParseError
+exceptions         BestVersionAlreadyInstalled
+exceptions         BadCommand
+exceptions         CommandError
+exceptions         PreviousBuildDirError
 operations.prepare RequirementPreparer
 operations.freeze  FrozenRequirement           <`__init__`>
 req.req_set        RequirementSet

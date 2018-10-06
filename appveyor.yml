@@ -52,9 +52,17 @@ install:
 
       $scripts_path = join-path -path $py_path -childpath "Scripts"
 
-      $env:PATH="$py_path.ToString();$scripts_path.ToString();$env:PATH"
+      $scripts_path = $scripts_path -replace ' ', '` '
 
       $py_exe = join-path -path $py_path -childpath python.exe
+
+      $py_exe = $py_exe -replace ' ', '` '
+
+      $py_path = $py_path.ToString()
+
+      $scripts_path = $scripts_path.ToString()
+
+      $env:PATH="$py_path;$scripts_path;$env:PATH"
 
       $py_exe = $py_exe.ToString()
 

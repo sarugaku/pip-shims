@@ -114,10 +114,10 @@ def test_link_and_ireq():
     url = "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
     link = Link(url)
     ireq = InstallRequirement.from_editable(url)
-    ireq2 = install_req_from_editable(url)
-    assert ireq.link == link
-    if ireq2:
+    if install_req_from_editable:
+        ireq2 = install_req_from_editable(url)
         assert ireq2.link == link
+    assert ireq.link == link
 
 
 def test_path_and_url():
@@ -181,8 +181,8 @@ def test_resolution(tmpdir, PipCommand):
         session=session,
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
-    ireq2 = install_req_from_line("requests>=2.18")
-    if ireq2:
+    if install_req_from_line:
+        ireq2 = install_req_from_line("requests>=2.18")
         assert str(ireq) == str(ireq2)
     requests_candidates = finder.find_all_candidates(ireq.name)
     candidates = sorted(

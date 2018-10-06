@@ -44,10 +44,35 @@ environment:
       PIP: "9.0.3"
 
 install:
-  - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - python --version
-  - python -m pip install --upgrade %PIP%
-  - python -m pip install -e .[tests]
+  - ps: |
+
+      $py_path = resolve-path $env:PYTHON
+
+      $py_path = $py_path -replace ' ', '` '
+
+      $scripts_path = join-path -path $py_path -childpath "Scripts"
+
+      $env:PATH="$py_path.ToString();$scripts_path.ToString();$env:PATH"
+
+      $py_exe = join-path -path $py_path -childpath python.exe
+
+      if ( $env:PIP ) { $pip = "pip==$env:PIP" } else { $pip = "pip" }
+
+      Invoke-Expression "$py_exe --version"
+      If ($LastExitCode -ne 0) {
+        exit $LastExitCode
+      }
+
+      Invoke-Expression "$py_exe -m pip install --upgrade $pip"
+      If ($LastExitCode -ne 0) {
+        exit $LastExitCode
+      }
+
+      Invoke-Expression "$py_exe -m pip install -e .[tests]"
+      If ($LastExitCode -ne 0) {
+        exit $LastExitCode
+      }
+
 
 build: off
 

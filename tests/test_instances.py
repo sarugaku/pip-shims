@@ -35,7 +35,10 @@ from pip_shims import (
     VcsSupport,
     Wheel,
     WheelCache,
-    WheelBuilder
+    WheelBuilder,
+    install_req_from_editable,
+    install_req_from_line,
+    FrozenRequirement
 )
 import pytest
 import six
@@ -111,7 +114,9 @@ def test_link_and_ireq():
     url = "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
     link = Link(url)
     ireq = InstallRequirement.from_editable(url)
+    ireq2 = install_req_from_editable(url)
     assert ireq.link == link
+    assert ireq2.link == link
 
 
 def test_path_and_url():
@@ -175,6 +180,8 @@ def test_resolution(tmpdir, PipCommand):
         session=session,
     )
     ireq = InstallRequirement.from_line("requests>=2.18")
+    ireq2 = install_req_from_line("requests>=2.18")
+    assert ireq == ireq2
     requests_candidates = finder.find_all_candidates(ireq.name)
     candidates = sorted(
         [
@@ -269,6 +276,13 @@ def test_abstract_dist():
 def test_safe_file_cache():
     sfc = SafeFileCache(directory=USER_CACHE_DIR)
     assert sfc.__class__.__name__ == "SafeFileCache"
+
+
+def test_frozen_req():
+    import pkg_resources
+    req = pkg_resources.Requirement.parse("requests==2.19.1")
+    fr = FrozenRequirement("requests", req, False)
+    assert fr is not None
 
 
 def test_wheel_cache():

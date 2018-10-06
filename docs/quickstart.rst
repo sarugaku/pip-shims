@@ -128,6 +128,7 @@ download           path_to_url
 __version__        pip_version
 exceptions         PipError
 operations.prepare RequirementPreparer
+operations.freeze  FrozenRequirement           <`__init__`>
 req.req_set        RequirementSet
 req.req_tracker    RequirementTracker
 resolve            Resolver

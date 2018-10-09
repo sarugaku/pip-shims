@@ -43,6 +43,9 @@ class _shims(object):
             "pip_shims.utils": utils
         }
         self.pip_version = getattr(self._modules["pip"], "__version__")
+        version_types = ["post", "pre", "dev", "rc"]
+        if any(post in self.pip_version.rsplit(".")[-1] for post in version_types):
+            self.pip_version, _, _ = self.pip_version.rpartition(".")
         self.parsed_pip_version = self._parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
         self._moves = {

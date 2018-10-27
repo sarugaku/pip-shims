@@ -49,6 +49,7 @@ from pip_shims import (
     BadCommand,
     CommandError,
     PreviousBuildDirError,
+    PyPI,
 )
 import pytest
 import six
@@ -391,3 +392,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
             builder = WheelBuilder(finder, preparer, wheel_cache)
             output_file = builder._build_one(ireq, output_dir.strpath)
     assert output_file, output_file
+
+
+def test_pypi():
+    assert "pypi.org" in PyPI.url

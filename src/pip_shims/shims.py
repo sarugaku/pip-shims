@@ -143,6 +143,7 @@ class _shims(object):
                 ("wheel.WheelCache", "7", "9.0.3")
             ),
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
+            "PyPI": ("models.index.PyPI", "7.0.0", "9999"),
         }
 
     def _ensure_methods(self, cls, classname, *methods):

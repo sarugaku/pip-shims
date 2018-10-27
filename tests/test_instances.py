@@ -395,4 +395,4 @@ def test_wheelbuilder(tmpdir, PipCommand):
 
 
 def test_pypi():
-    assert "pypi.org" in PyPI.url
+    assert "pypi.org" in PyPI.url or "pypi.python.org" in PyPI.url

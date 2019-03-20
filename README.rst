@@ -61,13 +61,11 @@ Summary
 
 **pip-shims** is a set of compatibilty access shims to the `pip`_ internal API. **pip-shims**
 provides compatibility with pip versions 8.0 through the current release (18.x).  The shims
-are provided using a lazy import strategy (powered by `modutil`_ where possible, falling
-back to *importlib* from the standard library with a lazy import strategy otherwise).
+are provided using a lazy import strategy by hacking a module by overloading a class instance's *getattr* method.
 This library exists due to my constant writing of the same set of import shims across
 many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_, and
 `passa`_.
 
-.. _modutil: https://github.com/sarugaku/pipfile
 .. _passa: https://github.com/sarugaku/passa
 .. _pip: https://github.com/pypa/pip
 .. _pipenv: https://github.com/pypa/pipenv
@@ -103,10 +101,12 @@ req.constructors   _strip_extras               req.req_install
 cli                cmdoptions                  cmdoptions
 cli.base_command   Command                     basecommand
 cli.parser         ConfigOptionParser          baseparser
+commands.freeze    DEV_PKGS
 exceptions         DistributionNotFound
 utils.hashes       FAVORITE_HASH
 models             FormatControl               index
 utils.misc         get_installed_distributions utils
+utils.compat       stdlib_pkgs                 compat
 cli.cmdoptions     index_group                 cmdoptions
 req.req_install    InstallRequirement
 req.constructors   install_req_from_line       req.req_install.InstallRequirement

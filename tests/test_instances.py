@@ -396,3 +396,13 @@ def test_wheelbuilder(tmpdir, PipCommand):
 
 def test_pypi():
     assert "pypi.org" in PyPI.url or "pypi.python.org" in PyPI.url
+
+
+def test_dev_pkgs():
+    from pip_shims.shims import DEV_PKGS
+    assert "pip" in DEV_PKGS and "wheel" in DEV_PKGS
+
+
+def test_stdlib_pkgs():
+    from pip_shims.shims import stdlib_pkgs
+    assert "argparse" in stdlib_pkgs

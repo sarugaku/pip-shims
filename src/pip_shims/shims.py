@@ -6,9 +6,12 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import six
-from six.moves import Callable
 
-six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))
+# format: off
+six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
+from six.moves import Callable  # type: ignore  # noqa  # isort:skip
+
+# format: on
 
 
 class _shims(object):

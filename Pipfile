@@ -1,20 +1,9 @@
 [packages]
-pip_shims = { path = '.', editable = true, extras = ["tests"] }
+pip_shims = { path = '.', editable = true, extras = ["tests", "dev"] }
 
 [dev-packages]
-invoke = '*'
 sphinx = '*'
 sphinx-rtd-theme = "*"
-parver = '*'
-towncrier = '*'
-wheel = '*'
-black = "*"
-pytest = '*'
-flake8 = '*'
-rope = "*"
-pytest-cov = "*"
-pytest-timeout = "*"
-isort = "*"
 
 [scripts]
 release = 'inv release'

@@ -12,7 +12,7 @@ from six.moves import Callable
 
 
 class _shims(object):
-    CURRENT_PIP_VERSION  = "18.1"
+    CURRENT_PIP_VERSION  = "19.0.3"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
 
@@ -144,6 +144,11 @@ class _shims(object):
             ),
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
             "PyPI": ("models.index.PyPI", "7.0.0", "9999"),
+            "stdlib_pkgs": (
+                ("utils.compat.stdlib_pkgs", "18.1", "9999"),
+                ("compat.stdlib_pkgs", "7", "18.0")
+            ),
+            "DEV_PKGS": ("commands.freeze.DEV_PKGS", "9.0.0", "9999")
         }
 
     def _ensure_methods(self, cls, classname, *methods):

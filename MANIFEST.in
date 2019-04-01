@@ -8,9 +8,11 @@ exclude .travis.yml
 exclude tox.ini
 exclude appveyor.yml
 exclude Pipfile*
+exclude azure-pipelines.yml
 
 recursive-include docs Makefile *.rst *.py *.bat
 recursive-exclude docs requirements*.txt
+recursive-exclude .azure-pipelines *.yml
 
 prune .github
 prune docs/build

@@ -102,7 +102,38 @@ PREBUMP = "patch"
 
 
 @invoke.task(pre=[clean])
-def release(ctx, type_, repo, prebump=PREBUMP):
+def build(ctx, draft=True, yes=False):
+    towncrier_cmd = "towncrier"
+    if not draft and yes:
+        towncrier_cmd = f"{towncrier_cmd} --yes"
+    elif draft:
+        towncrier_cmd = f"{towncrier_cmd} --draft"
+    ctx.run("python setup.py sdist bdist_wheel")
+
+
+@invoke.task(pre=[build])
+def publish(ctx, repo, config_file=None, yes=False):
+    dist_pattern = f'{PACKAGE_NAME.replace("-", "[-_]")}-*'
+    artifacts = list(ROOT.joinpath("dist").glob(dist_pattern))
+    filename_display = "\n".join(f"  {a}" for a in artifacts)
+    print(f"[release] Will upload:\n{filename_display}")
+    if not yes:
+        try:
+            input("[release] Release ready. ENTER to upload, CTRL-C to abort: ")
+        except KeyboardInterrupt:
+            print("\nAborted!")
+            return
+
+    arg_display = " ".join(f'"{n}"' for n in artifacts)
+    cmd = f'twine upload --repository="{repo}"'
+    if config_file:
+        cmd = f'{cmd} --config-file="{config_file}"'
+    cmd = f"{cmd} {arg_display}"
+    ctx.run(cmd)
+
+
+@invoke.task(pre=[clean])
+def release(ctx, type_, repo, prebump=PREBUMP, config_file=None, commit=True, yes=False):
     """Make a new release.
     """
     if prebump not in REL_TYPES:
@@ -118,10 +149,11 @@ def release(ctx, type_, repo, prebump=PREBUMP):
 
     ctx.run("towncrier")
 
-    ctx.run(f'git commit -am "Release {version}"')
+    if commit:
+        ctx.run(f'git commit -am "Release {version}"')
 
-    tag_content = tag_content.replace('"', '\\"')
-    ctx.run(f'git tag -a {version} -m "Version {version}\n\n{tag_content}"')
+        tag_content = tag_content.replace('"', '\\"')
+        ctx.run(f'git tag -a {version} -m "Version {version}\n\n{tag_content}"')
 
     ctx.run(f"python setup.py sdist bdist_wheel")
 
@@ -129,19 +161,24 @@ def release(ctx, type_, repo, prebump=PREBUMP):
     artifacts = list(ROOT.joinpath("dist").glob(dist_pattern))
     filename_display = "\n".join(f"  {a}" for a in artifacts)
     print(f"[release] Will upload:\n{filename_display}")
-    try:
-        input("[release] Release ready. ENTER to upload, CTRL-C to abort: ")
-    except KeyboardInterrupt:
-        print("\nAborted!")
-        return
+    if not yes:
+        try:
+            input("[release] Release ready. ENTER to upload, CTRL-C to abort: ")
+        except KeyboardInterrupt:
+            print("\nAborted!")
+            return
 
     arg_display = " ".join(f'"{n}"' for n in artifacts)
-    ctx.run(f'twine upload --repository="{repo}" {arg_display}')
+    cmd = f'twine upload --repository="{repo}"'
+    if config_file:
+        cmd = f'{cmd} --config-file="{config_file}"'
+    cmd = f"{cmd} {arg_display}"
+    ctx.run(cmd)
 
     version = _prebump(version, prebump)
     _write_version(version)
-
-    ctx.run(f'git commit -am "Prebump to {version}"')
+    if commit:
+        ctx.run(f'git commit -am "Prebump to {version}"')
 
 
 @invoke.task

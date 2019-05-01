@@ -11,6 +11,14 @@ environment:
     - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python27-x64"
+      PIP: "19.0.3"
+    - PYTHON: "C:\\Python34-x64"
+      PIP: "19.0.3"
+    - PYTHON: "C:\\Python35-x64"
+      PIP: "19.0.3"
+    - PYTHON: "C:\\Python36-x64"
+      PIP: "19.0.3"
+    - PYTHON: "C:\\Python27-x64"
       PIP: "18.1"
     - PYTHON: "C:\\Python34-x64"
       PIP: "18.1"
@@ -83,7 +91,12 @@ install:
         exit $LastExitCode
       }
 
-      Invoke-Expression "$py_exe -m pip install -e .[tests]"
+      if ( $env:PIP ) {
+        Invoke-Expression "$py_exe -m pip install -e .[tests]"
+      }
+      else {
+        Invoke-Expression "$py_exe -m pip install -e .[tests] --no-use-pep517"
+      }
       If ($LastExitCode -ne 0) {
         exit $LastExitCode
       }

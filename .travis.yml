@@ -18,6 +18,20 @@ script:
 
 jobs:
   include:
+    - &test-pip19
+      stage: test-pip19
+      python: "3.6"
+      env: PIP="pip==19.0.3"
+    - <<: *test-pip19
+      python: "3.7"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip19
+      python: "3.5"
+    - <<: *test-pip19
+      python: "3.4"
+    - <<: *test-pip19
+      python: "2.7"
     - &test-pip181
       stage: test-pip181
       python: "3.6"
@@ -36,6 +50,10 @@ jobs:
       stage: test-pipmaster
       python: "3.6"
       env: PIP="-e git+https://github.com/pypa/pip@master#egg=pip"
+      install:
+        - "python -m pip install ${PIP}"
+        - "python -m pip install pytest pytest-xdist pytest-cov pytest-timeout"
+        - "python -m pip install -e .[tests] --no-use-pep517"
     - <<: *test-pipmaster
       python: "3.7"
       dist: xenial
@@ -90,14 +108,15 @@ jobs:
       python: "2.7"
     - stage: packaging
       python: "3.6"
-      if: env(PIP) == "pip==18.1" && python == "3.6"
+      if: env(PIP) == "pip==19.0.3" && python == "3.6"
       install:
-        - "python -m pip install --upgrade check-manifest readme-renderer"
+        - "python -m pip install --upgrade twine readme-renderer[md]"
       script:
-        - "python setup.py check -m -r -s"
+        - "python setup.py sdist bdist_wheel"
+        - "twine check dist/*"
     - stage: coverage
       python: "3.6"
-      if: env(PIP) == "pip==18.1" && python == "3.6"
+      if: env(PIP) == "pip==19.0.3" && python == "3.6"
       install:
         - "pip install --upgrade pip pytest-timeout"
         - "pip install --upgrade -e .[tests]"

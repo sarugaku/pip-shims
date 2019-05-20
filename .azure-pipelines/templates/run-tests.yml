@@ -1,5 +1,3 @@
-parameters:
-
 - job: ${{ parameters.jobName }}
   pool:
     vmImage: ${{ parameters.vmImage }}

@@ -1,3 +1,6 @@
 steps:
-  - script: python -m pip install --upgrade pip setuptools wheel pipenv && pipenv install --dev
+  - script: |
+      python -m pip install $(PIP_VERSION) --ignore-installed
+      python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
+      python -m pip install -e .[tests]
     displayName: Install Dependencies

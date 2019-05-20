@@ -1,20 +1,50 @@
-steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: $(python.version)
-    displayName: Use Python $(python.version)
+parameters:
+  vmImage: ''
+  jobName: ''
+  pythonVersions:
+  - '2.7'
+  - '3.5'
+  - '3.6'
+  - '3.7'
+  pipVersions:
+  - 'pip==9.0.3'
+  - 'pip==10.0.1'
+  - 'pip==18.0'
+  - 'pip==19.0.3'
+  - 'pip==19.1.1'
+  - 'git+https://github.com/pypa/pip@master#egg=pip'
 
-  - template: install-dependencies.yml
 
-  - script: pipenv run pip install -e .[dev,tests] --upgrade
-    displayName: Install Package
+- ${{ each python in parameters.pythonVersions }}:
+  - ${{ each pipVersion in parameters.pipVersions }}:
+    - job: ${{ parameters.jobName }}
+      pool:
+        vmImage: ${{ parameters.vmImage }}
+      variables:
+      - group: CI
+      - python.version: ${{ python }}
+      - PIP_VERSION: ${{ pipVersion }}
+      steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: ${{ python }}
+        displayName: Use Python ${{ python }}
 
-  - script: pipenv run pytest -ra --junitxml=junit/test-results.xml tests/
-    displayName: 'Run Pytest'
+      - script: |
+          python -m pip install ${{ pipVersion }} --ignore-installed
+          python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
+          python -m pip install -e .[tests]
+        displayName: Install Dependencies
 
-  - task: PublishTestResults@2
-    inputs:
-      testResultsFiles: '**/test-results.xml'
-      testRunTitle: '$(Agent.OS) - $(Build.DefinitionName) - Python $(python.version)'
-    condition: succeededOrFailed()
-    displayName: 'Publish Test Results'
+      - script: pipenv run pip install -e .[dev,tests] --upgrade
+        displayName: Install Package
+
+      - script: pipenv run pytest -ra --junitxml=junit/test-results.xml tests/
+        displayName: 'Run Pytest'
+
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFiles: '**/test-results.xml'
+          testRunTitle: '$(Agent.OS) - $(Build.DefinitionName) - Python $(python.version)'
+        condition: succeededOrFailed()
+        displayName: 'Publish Test Results'

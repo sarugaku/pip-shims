@@ -15,7 +15,7 @@ from six.moves import Callable  # type: ignore  # noqa  # isort:skip
 
 
 class _shims(object):
-    CURRENT_PIP_VERSION = "19.0.3"
+    CURRENT_PIP_VERSION = "19.1.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
 

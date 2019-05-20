@@ -11,16 +11,22 @@ jobs:
   parameters:
     vmImage: 'Ubuntu-16.04'
     jobName: TestLinux
+    pythonVersions: ["3.7", "3.6", "3.5", "2.7"],
+    pipVersions: ["pip==9.0.3", "pip==10.0.1", "pip==18.0", "pip==19.0.3", "pip==19.1.1", "git+https://github.com/pypa/pip@master#egg=pip"]
 
 - template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'windows-2019'
     jobName: TestWindows
+    pythonVersions: ["3.7", "3.6", "3.5", "2.7"],
+    pipVersions: ["pip==9.0.3", "pip==10.0.1", "pip==18.0", "pip==19.0.3", "pip==19.1.1", "git+https://github.com/pypa/pip@master#egg=pip"]
 
 - template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'macOS-10.13'
     jobName: TestMacOS
+    pythonVersions: ["3.7", "3.6", "3.5", "2.7"],
+    pipVersions: ["pip==9.0.3", "pip==10.0.1", "pip==18.0", "pip==19.0.3", "pip==19.1.1", "git+https://github.com/pypa/pip@master#egg=pip"]
 
 - job: BuildPackage
   dependsOn:

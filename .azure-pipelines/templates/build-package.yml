@@ -7,9 +7,10 @@ steps:
   - template: install-dependencies.yml
 
   - script: |
-      pip install invoke towncrier
+      pip install invoke towncrier readme-renderer[md] twine
       inv clean
       inv build
+      twine check dist/*
     displayName: Build Package
   - task: CopyFiles@2
     inputs:

@@ -14,7 +14,7 @@ parameters:
   - 'pip==19.1.1'
   - 'git+https://github.com/pypa/pip@master#egg=pip'
 
-${{ each pipVersion in parameters.pipVersions }}:
+- ${{ each pipVersion in parameters.pipVersions }}:
 - job: ${{ parameters.jobName }} - ${{ parameters.vmImage }} - ${{ pipVersion }}
   pool:
     vmImage: ${{ parameters.vmImage }}

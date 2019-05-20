@@ -14,7 +14,6 @@ parameters:
   - 'pip==19.1.1'
   - 'git+https://github.com/pypa/pip@master#egg=pip'
 
-
 - ${{ each python in parameters.pythonVersions }}:
   - ${{ each pipVersion in parameters.pipVersions }}:
     - job: ${{ parameters.jobName }}
@@ -27,11 +26,11 @@ parameters:
       steps:
       - task: UsePythonVersion@0
         inputs:
-          versionSpec: ${{ python }}
-        displayName: Use Python ${{ python }}
+          versionSpec: $(python.version)
+        displayName: Use Python $(python.version)
 
       - script: |
-          python -m pip install ${{ pipVersion }} --ignore-installed
+          python -m pip install $(pipVersion) --ignore-installed
           python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
           python -m pip install -e .[tests]
         displayName: Install Dependencies

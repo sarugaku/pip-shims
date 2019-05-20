@@ -6,7 +6,6 @@
 trigger:
 - master
 
-jobs:
 - template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'Ubuntu-16.04'

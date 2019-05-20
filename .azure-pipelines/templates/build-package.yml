@@ -6,15 +6,10 @@ steps:
 
   - template: install-dependencies.yml
 
-  - script: python -m pip install pipenv --upgrade
-    displayName: Install Pipenv
-
-  - script: pipenv install --dev --pre
-    displayName: Create Development Environment
-
   - script: |
-      pipenv run inv clean
-      pipenv run inv build
+      pip install invoke towncrier
+      inv clean
+      inv build
     displayName: Build Package
   - task: CopyFiles@2
     inputs:

@@ -7,17 +7,17 @@ trigger:
 - master
 
 jobs:
-- template: .azure-pipelines/run-tests.yml
+- template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'Ubuntu-16.04'
     jobName: TestLinux
 
-- template: .azure-pipelines/run-tests.yml
+- template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'windows-2019'
     jobName: TestWindows
 
-- template: .azure-pipelines/run-tests.yml
+- template: .azure-pipelines/templates/run-tests.yml
   parameters:
     vmImage: 'macOS-10.13'
     jobName: TestMacOS

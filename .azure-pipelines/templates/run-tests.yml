@@ -29,7 +29,7 @@ jobs:
     displayName: Use Python $(python.version)
 
   - script: |
-      python -m pip install $(PIP_VERSION) --ignore-installed
+      python -m pip install $(PIP_VERSION)
       python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
       python -m pip install -e .[tests]
     displayName: Install Dependencies

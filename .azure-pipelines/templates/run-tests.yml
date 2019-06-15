@@ -35,10 +35,14 @@ jobs:
         . .venv/Scripts/activate.ps1
         ./.venv/Scripts/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
       displayName: Install Dependencies
+      env:
+        PYTHONWARNINGS: ignore:DEPRECATION
     - powershell: |
         . .venv/Scripts/activate.ps1
         pytest -ra --junitxml=junit/test-results.xml tests/
       displayName: 'Run Pytest'
+      env:
+        PYTHONWARNINGS: ignore:DEPRECATION
 
   - ${{ if ne(parameters.vmImage, 'windows-2019') }}:
     - script: |
@@ -47,10 +51,14 @@ jobs:
         . .venv/bin/activate && \
             ./.venv/bin/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
       displayName: Install Dependencies
+      env:
+        PYTHONWARNINGS: ignore:DEPRECATION
     - script: |
         . .venv/bin/activate && \
             pytest -ra --junitxml=junit/test-results.xml tests/
       displayName: 'Run Pytest'
+      env:
+        PYTHONWARNINGS: ignore:DEPRECATION
 
   - task: PublishTestResults@2
     inputs:

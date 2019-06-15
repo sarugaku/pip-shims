@@ -1,0 +1,1 @@
+Updated ``PackageFinder`` test and added ``CandidateEvaluator`` import starting with ``pip>=19.1`` for finding prerelease candidates.

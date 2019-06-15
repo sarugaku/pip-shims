@@ -149,6 +149,7 @@ class _shims(object):
                 ("cmdoptions.make_option_group", "7.0.0", "18.0"),
             ),
             "PackageFinder": ("index.PackageFinder", "7.0.0", "9999"),
+            "CandidateEvaluator": ("index.CandidateEvaluator", "19.1", "9999"),
             "parse_requirements": ("req.req_file.parse_requirements", "7.0.0", "9999"),
             "path_to_url": ("download.path_to_url", "7.0.0", "9999"),
             "PipError": ("exceptions.PipError", "7.0.0", "9999"),
@@ -164,7 +165,10 @@ class _shims(object):
             "UninstallPathSet": ("req.req_uninstall.UninstallPathSet", "7.0.0", "9999"),
             "url_to_path": ("download.url_to_path", "7.0.0", "9999"),
             "USER_CACHE_DIR": ("locations.USER_CACHE_DIR", "7.0.0", "9999"),
-            "VcsSupport": ("vcs.VcsSupport", "7.0.0", "9999"),
+            "VcsSupport": (
+                ("vcs.VcsSupport", "7.0.0", "19.1.1"),
+                ("vcs.versioncontrol.VcsSupport", "19.2", "9999"),
+            ),
             "Wheel": ("wheel.Wheel", "7.0.0", "9999"),
             "WheelCache": (
                 ("cache.WheelCache", "10.0.0", "9999"),

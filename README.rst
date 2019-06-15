@@ -118,6 +118,7 @@ utils.misc         is_installable_dir          utils
 index              Link
 operations.prepare make_abstract_dist          req.req_set
 cli.cmdoptions     make_option_group           cmdoptions
+index              CandidateEvaluator
 index              PackageFinder
 req.req_file       parse_requirements
 index              parse_version
@@ -141,7 +142,7 @@ download           SafeFileCache
 download           url_to_path
 download           unpack_url
 locations          USER_CACHE_DIR
-vcs                VcsSupport
+vcs.versioncontrol VcsSupport                  vcs.VcsSupport
 wheel              Wheel
 wheel              WheelBuilder
 cache              WheelCache                  wheel

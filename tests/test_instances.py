@@ -349,7 +349,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "trusted_hosts": pip_options.trusted_hosts,
         "session": session,
     }
-    if pip_version >= parse_version("19.1.1"):
+    if pip_version > parse_version("19.1.1"):
         finder_args["candidate_evaluator"] = CandidateEvaluator(
             target_python=None,
             prefer_binary=False,

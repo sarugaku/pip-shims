@@ -1,6 +1,6 @@
 steps:
   - script: |
-      python -m pip install $(PIP_VERSION)
+      python -m pip install --upgrade pip
       python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
       python -m pip install -e .[tests]
     displayName: Install Dependencies

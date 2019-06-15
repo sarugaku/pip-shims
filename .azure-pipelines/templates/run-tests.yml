@@ -1,7 +1,7 @@
 parameters:
   pythonVersions: []
   pipVersions: []
-  vmImageName: ''
+  vmImage: ''
   jobName: ''
 
 jobs:
@@ -28,14 +28,35 @@ jobs:
       versionSpec: $(python.version)
     displayName: Use Python $(python.version)
 
-  - script: |
-      python -m pip install $(PIP_VERSION)
-      python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
-      python -m pip install -e .[tests]
-    displayName: Install Dependencies
+  ${{ if eq(parameters.vmImage, 'windows-2019') }}:
+    - powershell: |
+        python -m pip install virtualenv --upgrade
+        python -m virtualenv .venv
+        source .venv/Scripts/activate.ps1
+        python -m pip install $(PIP_VERSION)
+        python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
+        python -m pip install -e .[tests]
+      displayName: Install Dependencies
+  ${{ if ne(parameters.vmImage, 'windows-2019') }}:
+    - script: |
+        python -m pip install virtualenv --upgrade
+        python -m virtualenv .venv
+        source .venv/bin/activate
+        python -m pip install $(PIP_VERSION)
+        python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
+        python -m pip install -e .[tests]
+      displayName: Install Dependencies
 
-  - script: pytest -ra --junitxml=junit/test-results.xml tests/
-    displayName: 'Run Pytest'
+  ${{ if eq(parameters.vmImage, 'windows-2019') }}:
+    - powershell: |
+       source .venv/Scripts/activate.ps1
+       pytest -ra --junitxml=junit/test-results.xml tests/
+      displayName: 'Run Pytest'
+  ${{ if ne(parameters.vmImage, 'windows-2019') }}:
+    - script: |
+       source .venv/bin/activate
+       pytest -ra --junitxml=junit/test-results.xml tests/
+      displayName: 'Run Pytest'
 
   - task: PublishTestResults@2
     inputs:

@@ -28,7 +28,7 @@ jobs:
       versionSpec: $(python.version)
     displayName: Use Python $(python.version)
 
-  ${{ if eq(parameters.vmImage, 'windows-2019') }}:
+  - ${{ if eq(parameters.vmImage, 'windows-2019') }}:
     - powershell: |
         python -m pip install virtualenv --upgrade
         python -m virtualenv .venv
@@ -37,7 +37,12 @@ jobs:
         python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
         python -m pip install -e .[tests]
       displayName: Install Dependencies
-  ${{ if ne(parameters.vmImage, 'windows-2019') }}:
+    - powershell: |
+       source .venv/Scripts/activate.ps1
+       pytest -ra --junitxml=junit/test-results.xml tests/
+      displayName: 'Run Pytest'
+
+  - ${{ if ne(parameters.vmImage, 'windows-2019') }}:
     - script: |
         python -m pip install virtualenv --upgrade
         python -m virtualenv .venv
@@ -46,13 +51,6 @@ jobs:
         python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
         python -m pip install -e .[tests]
       displayName: Install Dependencies
-
-  ${{ if eq(parameters.vmImage, 'windows-2019') }}:
-    - powershell: |
-       source .venv/Scripts/activate.ps1
-       pytest -ra --junitxml=junit/test-results.xml tests/
-      displayName: 'Run Pytest'
-  ${{ if ne(parameters.vmImage, 'windows-2019') }}:
     - script: |
        source .venv/bin/activate
        pytest -ra --junitxml=junit/test-results.xml tests/

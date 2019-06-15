@@ -33,9 +33,7 @@ jobs:
         python -m pip install virtualenv --upgrade
         python -m virtualenv .venv
         . .venv/Scripts/activate.ps1
-        python -m pip install $(PIP_VERSION)
-        python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
-        python -m pip install -e .[tests]
+        ./.venv/Scripts/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
       displayName: Install Dependencies
     - powershell: |
         . .venv/Scripts/activate.ps1
@@ -47,9 +45,7 @@ jobs:
         python -m pip install virtualenv --upgrade
         python -m virtualenv .venv
         . .venv/bin/activate && \
-            python -m pip install $(PIP_VERSION) &&
-            python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade && \
-            python -m pip install -e .[tests]
+            ./.venv/bin/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
       displayName: Install Dependencies
     - script: |
         . .venv/bin/activate && \

@@ -1,3 +1,20 @@
+0.3.3 (2019-06-16)
+==================
+
+Features
+--------
+
+- Added ``commands.freeze.DEV_PKGS`` and ``utils.compat.stdlib_pkgs`` shims.  `#25 <https://github.com/sarugaku/pip-shims/issues/25>`_
+  
+- Updated ``PackageFinder`` test and added ``CandidateEvaluator`` import starting with ``pip>=19.1`` for finding prerelease candidates.  `#27 <https://github.com/sarugaku/pip-shims/issues/27>`_
+  
+
+Bug Fixes
+---------
+
+- Fixed import paths for ``VcsSupport`` on ``pip>19.1.1``.  `#28 <https://github.com/sarugaku/pip-shims/issues/28>`_
+
+
 0.3.2 (2018-10-27)
 =======================
 

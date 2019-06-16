@@ -1,1 +1,0 @@
-Added ``commands.freeze.DEV_PKGS`` and ``utils.compat.stdlib_pkgs`` shims.

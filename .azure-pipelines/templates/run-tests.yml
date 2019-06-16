@@ -48,14 +48,14 @@ jobs:
     - script: |
         python -m pip install virtualenv --upgrade
         python -m virtualenv .venv
-        . .venv/bin/activate && \
-            ./.venv/bin/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
+        . ./.venv/bin/activate && \
+            PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
       displayName: Install Dependencies
       env:
         PYTHONWARNINGS: ignore:DEPRECATION
     - script: |
-        . .venv/bin/activate && \
-            pytest -ra --junitxml=junit/test-results.xml tests/
+        . ./.venv/bin/activate && \
+            PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pytest -ra --junitxml=junit/test-results.xml tests/
       displayName: 'Run Pytest'
       env:
         PYTHONWARNINGS: ignore:DEPRECATION

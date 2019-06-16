@@ -28,37 +28,48 @@ jobs:
       versionSpec: $(python.version)
     displayName: Use Python $(python.version)
 
-  - ${{ if eq(parameters.vmImage, 'windows-2019') }}:
-    - powershell: |
-        python -m pip install virtualenv --upgrade
-        python -m virtualenv .venv
-        . .venv/Scripts/activate.ps1
-        ./.venv/Scripts/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
-      displayName: Install Dependencies
-      env:
-        PYTHONWARNINGS: ignore:DEPRECATION
-    - powershell: |
-        . .venv/Scripts/activate.ps1
-        pytest -ra --junitxml=junit/test-results.xml tests/
-      displayName: 'Run Pytest'
-      env:
-        PYTHONWARNINGS: ignore:DEPRECATION
+  - script: |
+      python -m pip install pipenv
+      python -m pipenv run pip install $(PIP_VERSION) --upgrade
+      pipenv install --dev
+    displayName: 'Install Dependencies'
+    env:
+      PYTHONWARNINGS: ignore:DEPRECATION
+  - script: pipenv run pytest -ra --junitxml=junit/test-results.xml tests/
+    displayName: 'Run PyTest'
+    env:
+      PYTHONWARNINGS: ignore:DEPRECATION
+#   - ${{ if eq(parameters.vmImage, 'windows-2019') }}:
+#     - powershell: |
+#         python -m pip install virtualenv --upgrade
+#         python -m virtualenv .venv
+#         . .venv/Scripts/activate.ps1
+#         ./.venv/Scripts/pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
+#       displayName: Install Dependencies
+#       env:
+#         PYTHONWARNINGS: ignore:DEPRECATION
+#     - powershell: |
+#         . .venv/Scripts/activate.ps1
+#         pytest -ra --junitxml=junit/test-results.xml tests/
+#       displayName: 'Run Pytest'
+#       env:
+#         PYTHONWARNINGS: ignore:DEPRECATION
 
-  - ${{ if ne(parameters.vmImage, 'windows-2019') }}:
-    - script: |
-        python -m pip install virtualenv --upgrade
-        python -m virtualenv .venv
-        . ./.venv/bin/activate && \
-            PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
-      displayName: Install Dependencies
-      env:
-        PYTHONWARNINGS: ignore:DEPRECATION
-    - script: |
-        . ./.venv/bin/activate && \
-            PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pytest -ra --junitxml=junit/test-results.xml tests/
-      displayName: 'Run Pytest'
-      env:
-        PYTHONWARNINGS: ignore:DEPRECATION
+#   - ${{ if ne(parameters.vmImage, 'windows-2019') }}:
+#     - script: |
+#         python -m pip install virtualenv --upgrade
+#         python -m virtualenv .venv
+#         . ./.venv/bin/activate && \
+#             PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pip install $(PIP_VERSION) setuptools wheel pytest-xdist pytest-cov pytest-timeout -e .[tests] --upgrade
+#       displayName: Install Dependencies
+#       env:
+#         PYTHONWARNINGS: ignore:DEPRECATION
+#     - script: |
+#         . ./.venv/bin/activate && \
+#             PATH="$(pwd)/.venv/bin:${PATH}" ./.venv/bin/python -m pytest -ra --junitxml=junit/test-results.xml tests/
+#       displayName: 'Run Pytest'
+#       env:
+#         PYTHONWARNINGS: ignore:DEPRECATION
 
   - task: PublishTestResults@2
     inputs:

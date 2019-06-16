@@ -1,60 +1,62 @@
 # -*- coding=utf-8 -*-
 from __future__ import absolute_import, unicode_literals
+
 import os
+import sys
+import textwrap
+
+import pytest
+import six
+
 from pip_shims import (
-    _strip_extras,
-    cmdoptions,
+    FAVORITE_HASH,
+    USER_CACHE_DIR,
+    BadCommand,
+    BestVersionAlreadyInstalled,
+    CandidateEvaluator,
     Command,
+    CommandError,
     ConfigOptionParser,
     DistributionNotFound,
-    FAVORITE_HASH,
     FormatControl,
+    FrozenRequirement,
+    InstallationError,
+    InstallRequirement,
+    Link,
+    PackageFinder,
+    PipError,
+    PreviousBuildDirError,
+    PyPI,
+    RequirementPreparer,
+    RequirementSet,
+    RequirementsFileParseError,
+    RequirementTracker,
+    Resolver,
+    SafeFileCache,
+    SourceDistribution,
+    UninstallationError,
+    VcsSupport,
+    Wheel,
+    WheelBuilder,
+    WheelCache,
+    _strip_extras,
+    cmdoptions,
     get_installed_distributions,
     index_group,
-    InstallRequirement,
+    install_req_from_editable,
+    install_req_from_line,
     is_archive_file,
     is_file_url,
-    unpack_url,
     is_installable_dir,
-    Link,
     make_abstract_dist,
     make_option_group,
-    PackageFinder,
     parse_requirements,
     parse_version,
     path_to_url,
     pip_version,
-    PipError,
-    RequirementPreparer,
-    RequirementSet,
-    RequirementTracker,
-    Resolver,
-    SafeFileCache,
+    unpack_url,
     url_to_path,
-    USER_CACHE_DIR,
-    VcsSupport,
-    Wheel,
-    WheelCache,
-    WheelBuilder,
-    install_req_from_editable,
-    install_req_from_line,
-    FrozenRequirement,
-    DistributionNotFound,
-    PipError,
-    InstallationError,
-    UninstallationError,
-    DistributionNotFound,
-    RequirementsFileParseError,
-    BestVersionAlreadyInstalled,
-    BadCommand,
-    CommandError,
-    PreviousBuildDirError,
-    PyPI,
 )
-import pytest
-import six
-import sys
-import textwrap
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
@@ -75,9 +77,7 @@ def test_command(PipCommand):
     pip_command.parser.add_option(cmdoptions.only_binary())
     assert make_option_group
     assert index_group
-    index_opts = cmdoptions.make_option_group(
-        cmdoptions.index_group, pip_command.parser
-    )
+    index_opts = cmdoptions.make_option_group(cmdoptions.index_group, pip_command.parser)
     pip_command.parser.insert_option_group(0, index_opts)
     assert "pypi" in pip_command.parser.option_groups[0].get_option("-i").default
 
@@ -103,7 +103,6 @@ def test_configparser(PipCommand):
         (CommandError, Exception),
         (PreviousBuildDirError, Exception),
     ],
-
 )
 def test_exceptions(exceptionclass, baseclass):
     assert issubclass(exceptionclass, baseclass)
@@ -145,7 +144,8 @@ def test_link_and_ireq():
 
 def test_path_and_url():
     path = "/path/to/file"
-    prefix = "/C:" if os.name == "nt" else ""
+    prefix, _ = os.path.splitdrive(os.getcwd())
+    prefix = "/{0}".format(prefix) if prefix else ""
     url = "file://{0}{1}".format(prefix, path)
     assert is_file_url(Link(url))
     assert path_to_url(path) == url
@@ -168,7 +168,8 @@ def test_is_installable(tmpdir):
             name="Test Project",
             version="0.0.0"
         )
-    """),
+    """
+        ),
         encoding="utf-8",
     )
     assert is_installable_dir(temp_dir.strpath)
@@ -196,13 +197,22 @@ def test_resolution(tmpdir, PipCommand):
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)
     assert session
-    finder = PackageFinder(
-        find_links=pip_options.find_links,
-        index_urls=[pip_options.index_url],
-        trusted_hosts=pip_options.trusted_hosts,
-        allow_all_prereleases=False,
-        session=session,
-    )
+    finder_args = {
+        "find_links": pip_options.find_links,
+        "index_urls": [pip_options.index_url],
+        "trusted_hosts": pip_options.trusted_hosts,
+        "session": session,
+    }
+    if parse_version(pip_version) > parse_version("19.1.1"):
+        finder_args["candidate_evaluator"] = CandidateEvaluator(
+            target_python=None,
+            prefer_binary=False,
+            allow_all_prereleases=False,
+            ignore_requires_python=False,
+        )
+    else:
+        finder_args["allow_all_prereleases"] = False
+    finder = PackageFinder(**finder_args)
     ireq = InstallRequirement.from_line("requests>=2.18")
     if install_req_from_line:
         ireq2 = install_req_from_line("requests>=2.18")
@@ -223,9 +233,11 @@ def test_resolution(tmpdir, PipCommand):
     assert "pythonhosted" in best_version.location.url
     req_file = tmpdir.mkdir("req_dir").join("requirements.txt")
     req_file.write_text(
-        textwrap.dedent("""
+        textwrap.dedent(
+            """
             requests>=2.18
-        """),
+        """
+        ),
         encoding="utf-8",
     )
     parsed_ireq = parse_requirements(
@@ -295,7 +307,7 @@ def test_abstract_dist():
         "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
     )
     abs_dist = make_abstract_dist(ireq)
-    assert abs_dist.__class__.__name__ == "IsSDist"
+    assert abs_dist.__class__.__name__ == SourceDistribution.__name__
 
 
 def test_safe_file_cache():
@@ -305,6 +317,7 @@ def test_safe_file_cache():
 
 def test_frozen_req():
     import pkg_resources
+
     req = pkg_resources.Requirement.parse("requests==2.19.1")
     fr = FrozenRequirement("requests", req, False)
     assert fr is not None
@@ -328,7 +341,7 @@ def test_wheel():
 
 @pytest.mark.skipif(
     (sys.version_info > (3, 0) and sys.version_info < (3, 5)),
-    reason="Can't build a wheel for six on python 3.5"
+    reason="Can't build a wheel for six on python 3.5",
 )
 def test_wheelbuilder(tmpdir, PipCommand):
     output_dir = tmpdir.join("output")
@@ -341,13 +354,22 @@ def test_wheelbuilder(tmpdir, PipCommand):
     CACHE_DIR = tmpdir.mkdir("CACHE_DIR")
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)
-    finder = PackageFinder(
-        find_links=pip_options.find_links,
-        index_urls=[pip_options.index_url],
-        trusted_hosts=pip_options.trusted_hosts,
-        allow_all_prereleases=False,
-        session=session,
-    )
+    finder_args = {
+        "find_links": pip_options.find_links,
+        "index_urls": [pip_options.index_url],
+        "trusted_hosts": pip_options.trusted_hosts,
+        "session": session,
+    }
+    if parse_version(pip_version) > parse_version("19.1.1"):
+        finder_args["candidate_evaluator"] = CandidateEvaluator(
+            target_python=None,
+            prefer_binary=False,
+            allow_all_prereleases=False,
+            ignore_requires_python=False,
+        )
+    else:
+        finder_args["allow_all_prereleases"] = False
+    finder = PackageFinder(**finder_args)
     build_dir = tmpdir.mkdir("build_dir")
     source_dir = tmpdir.mkdir("source_dir")
     download_dir = tmpdir.mkdir("download_dir")
@@ -360,7 +382,9 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "wheel_download_dir": wheel_download_dir.strpath,
         "wheel_cache": wheel_cache,
     }
-    ireq = InstallRequirement.from_editable("git+https://github.com/urllib3/urllib3@1.23#egg=urllib3")
+    ireq = InstallRequirement.from_editable(
+        "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
+    )
     ireq.populate_link(finder, False, False)
     ireq.ensure_has_source_dir(kwargs["src_dir"])
     # Ensure the remote artifact is downloaded locally. For wheels, it is
@@ -369,7 +393,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
     unpack_kwargs = {
         "only_download": ireq.is_wheel,
         "session": session,
-        "hashes": ireq.hashes(True)
+        "hashes": ireq.hashes(True),
     }
     if parse_version(pip_version) >= parse_version("10"):
         unpack_kwargs["progress_bar"] = False
@@ -400,9 +424,11 @@ def test_pypi():
 
 def test_dev_pkgs():
     from pip_shims.shims import DEV_PKGS
+
     assert "pip" in DEV_PKGS and "wheel" in DEV_PKGS
 
 
 def test_stdlib_pkgs():
     from pip_shims.shims import stdlib_pkgs
+
     assert "argparse" in stdlib_pkgs

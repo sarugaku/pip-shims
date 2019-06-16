@@ -13,10 +13,10 @@ exclude azure-pipelines.yml
 
 recursive-include docs Makefile *.rst *.py *.bat
 recursive-exclude docs requirements*.txt
-recursive-exclude .azure-pipelines *.yml
 
 prune .github
 prune docs/build
 prune news
 prune tasks
 prune tests
+prune .azure-pipelines

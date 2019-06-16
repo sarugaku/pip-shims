@@ -1,0 +1,1 @@
+Fixed import paths for ``VcsSupport`` on ``pip>19.1.1``.

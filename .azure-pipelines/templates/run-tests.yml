@@ -1,7 +1,7 @@
 parameters:
   pythonVersions: []
   pipVersions: []
-  vmImageName: ''
+  vmImage: ''
   jobName: ''
 
 jobs:
@@ -15,27 +15,33 @@ jobs:
           ${{ if contains(pip, 'github.com') }}:
             ${{ format('{0}-PIPMaster', py) }}:
               python.version: ${{ py }}
-              PIP_VERSION: ${{ pip }}
+              INSTALL_PIP_VERSION: ${{ pip }}
           ${{ if not(contains(pip, 'github.com')) }}:
             ${{ format('{0}{1}', py, pip) }}:
               python.version: ${{ py }}
-              PIP_VERSION: ${{ pip }}
+              INSTALL_PIP_VERSION: ${{ pip }}
   variables:
   - group: CI
   steps:
+  - ${{ if eq(parameters.vmImage, 'ubuntu-16.04') }}:
+    - template: ./reinstall-pythons.yml
+
   - task: UsePythonVersion@0
     inputs:
       versionSpec: $(python.version)
     displayName: Use Python $(python.version)
 
   - script: |
-      python -m pip install $(PIP_VERSION) --ignore-installed
-      python -m pip install setuptools wheel pytest-xdist pytest-cov pytest-timeout --upgrade
-      python -m pip install -e .[tests]
-    displayName: Install Dependencies
-
-  - script: pytest -ra --junitxml=junit/test-results.xml tests/
-    displayName: 'Run Pytest'
+      python -m pip install pipenv
+      python -m pipenv run python -m pip install $(INSTALL_PIP_VERSION) --upgrade
+      pipenv install --dev
+    displayName: 'Install Dependencies'
+    env:
+      PYTHONWARNINGS: ignore:DEPRECATION
+  - script: pipenv run pytest -ra --junitxml=junit/test-results.xml tests/
+    displayName: 'Run PyTest'
+    env:
+      PYTHONWARNINGS: ignore:DEPRECATION
 
   - task: PublishTestResults@2
     inputs:

@@ -143,7 +143,8 @@ def test_link_and_ireq():
 
 def test_path_and_url():
     path = "/path/to/file"
-    prefix = "/C:" if os.name == "nt" else ""
+    prefix, _ = os.path.splitdrive(os.getcwd())
+    prefix = "/{0}".format(prefix) if prefix else ""
     url = "file://{0}{1}".format(prefix, path)
     assert is_file_url(Link(url))
     assert path_to_url(path) == url

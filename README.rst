@@ -94,56 +94,61 @@ Available Shims
 
 **pip-shims** provides the following compatibility shims:
 
-================== =========================== ===================================
-Import Path        Import Name                 Former Path
-================== =========================== ===================================
-req.constructors   _strip_extras               req.req_install
-cli                cmdoptions                  cmdoptions
-cli.base_command   Command                     basecommand
-cli.parser         ConfigOptionParser          baseparser
-commands.freeze    DEV_PKGS
-exceptions         DistributionNotFound
-utils.hashes       FAVORITE_HASH
-models             FormatControl               index
-utils.misc         get_installed_distributions utils
-utils.compat       stdlib_pkgs                 compat
-cli.cmdoptions     index_group                 cmdoptions
-req.req_install    InstallRequirement
-req.constructors   install_req_from_line       req.req_install.InstallRequirement
-req.constructors   install_req_from_editable   req.req_install.InstallRequirement
-req.req_uninstall  UninstallPathSet
-download           is_archive_file
-download           is_file_url
-utils.misc         is_installable_dir          utils
-index              Link
-operations.prepare make_abstract_dist          req.req_set
-cli.cmdoptions     make_option_group           cmdoptions
-index              CandidateEvaluator
-index              PackageFinder
-req.req_file       parse_requirements
-index              parse_version
-download           path_to_url
-__version__        pip_version
-exceptions         PipError
-exceptions         InstallationError
-exceptions         UninstallationError
-exceptions         DistributionNotFound
-exceptions         RequirementsFileParseError
-exceptions         BestVersionAlreadyInstalled
-exceptions         BadCommand
-exceptions         CommandError
-exceptions         PreviousBuildDirError
-operations.prepare RequirementPreparer
-operations.freeze  FrozenRequirement           <`__init__`>
-req.req_set        RequirementSet
-req.req_tracker    RequirementTracker
-resolve            Resolver
-download           SafeFileCache
-download           url_to_path
-download           unpack_url
-locations          USER_CACHE_DIR
-vcs.versioncontrol VcsSupport                  vcs.VcsSupport
-wheel              Wheel
-wheel              WheelBuilder
-cache              WheelCache                  wheel
-================== =========================== ===================================
+======================== ========================================== =======================================
+Import Path               Import Name                                Former Path
+======================== ========================================== =======================================
+req.constructors          _strip_extras                              req.req_install
+cli                       cmdoptions                                 cmdoptions
+cli.base_command          Command                                    basecommand
+cli.parser                ConfigOptionParser                         baseparser
+commands.freeze           DEV_PKGS
+exceptions                DistributionNotFound
+utils.hashes              FAVORITE_HASH
+models                    FormatControl                              index
+utils.misc                get_installed_distributions                utils
+utils.compat              stdlib_pkgs                                compat
+cli.cmdoptions            index_group                                cmdoptions
+req.req_install           InstallRequirement
+req.constructors          install_req_from_line                      req.req_install.InstallRequirement
+req.constructors          install_req_from_editable                  req.req_install.InstallRequirement
+req.req_uninstall         UninstallPathSet
+distributions             make_distribution_for_install_requirement  operations.prepare.make_abstract_dist
+distributions.base        AbstractDistribution
+distributions.source      SourceDistribution
+distributions.installed   InstalledDistribution
+distributions.wheel       WheelDistribution
+download                  is_archive_file
+download                  is_file_url
+utils.misc                is_installable_dir                         utils
+index                     Link
+operations.prepare        make_abstract_dist                         req.req_set
+cli.cmdoptions            make_option_group                          cmdoptions
+index                     CandidateEvaluator
+index                     PackageFinder
+req.req_file              parse_requirements
+index                     parse_version
+download                  path_to_url
+__version__               pip_version
+exceptions                PipError
+exceptions                InstallationError
+exceptions                UninstallationError
+exceptions                DistributionNotFound
+exceptions                RequirementsFileParseError
+exceptions                BestVersionAlreadyInstalled
+exceptions                BadCommand
+exceptions                CommandError
+exceptions                PreviousBuildDirError
+operations.prepare        RequirementPreparer
+operations.freeze         FrozenRequirement                          <`__init__`>
+req.req_set               RequirementSet
+req.req_tracker           RequirementTracker
+resolve                   Resolver
+download                  SafeFileCache
+download                  url_to_path
+download                  unpack_url
+locations                 USER_CACHE_DIR
+vcs.versioncontrol        VcsSupport                                 vcs.VcsSupport
+wheel                     Wheel
+wheel                     WheelBuilder
+cache                     WheelCache                                 wheel
+======================== ========================================== =======================================

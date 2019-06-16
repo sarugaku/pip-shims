@@ -195,13 +195,22 @@ def test_resolution(tmpdir, PipCommand):
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)
     assert session
-    finder = PackageFinder(
-        find_links=pip_options.find_links,
-        index_urls=[pip_options.index_url],
-        trusted_hosts=pip_options.trusted_hosts,
-        allow_all_prereleases=False,
-        session=session,
-    )
+    finder_args = {
+        "find_links": pip_options.find_links,
+        "index_urls": [pip_options.index_url],
+        "trusted_hosts": pip_options.trusted_hosts,
+        "session": session,
+    }
+    if parse_version(pip_version) > parse_version("19.1.1"):
+        finder_args["candidate_evaluator"] = CandidateEvaluator(
+            target_python=None,
+            prefer_binary=False,
+            allow_all_prereleases=False,
+            ignore_requires_python=False,
+        )
+    else:
+        finder_args["allow_all_prereleases"] = False
+    finder = PackageFinder(**finder_args)
     ireq = InstallRequirement.from_line("requests>=2.18")
     if install_req_from_line:
         ireq2 = install_req_from_line("requests>=2.18")

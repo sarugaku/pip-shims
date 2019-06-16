@@ -141,8 +141,18 @@ class _shims(object):
             ),
             "Link": ("index.Link", "7.0.0", "9999"),
             "make_abstract_dist": (
-                ("operations.prepare.make_abstract_dist", "10.0.0", "9999"),
+                (
+                    "distributions.make_distribution_for_install_requirement",
+                    "19.1.2",
+                    "9999",
+                ),
+                ("operations.prepare.make_abstract_dist", "10.0.0", "19.1.1"),
                 ("req.req_set.make_abstract_dist", "7.0.0", "9.0.3"),
+            ),
+            "make_distribution_for_install_requirement": (
+                "distributions.make_distribution_for_install_requirement",
+                "19.1.2",
+                "9999",
             ),
             "make_option_group": (
                 ("cli.cmdoptions.make_option_group", "18.1", "9999"),
@@ -175,6 +185,26 @@ class _shims(object):
                 ("wheel.WheelCache", "7", "9.0.3"),
             ),
             "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
+            "AbstractDistribution": (
+                "distributions.base.AbstractDistribution",
+                "19.1.2",
+                "9999",
+            ),
+            "InstalledDistribution": (
+                "distributions.installed.InstalledDistribution",
+                "19.1.2",
+                "9999",
+            ),
+            "SourceDistribution": (
+                "distributions.source.SourceDistribution",
+                "19.1.2",
+                "9999",
+            ),
+            "WheelDistribution": (
+                "distributions.wheel.WheelDistribution",
+                "19.1.2",
+                "9999",
+            ),
             "PyPI": ("models.index.PyPI", "7.0.0", "9999"),
             "stdlib_pkgs": (
                 ("utils.compat.stdlib_pkgs", "18.1", "9999"),

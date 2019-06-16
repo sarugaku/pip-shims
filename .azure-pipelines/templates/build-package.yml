@@ -7,7 +7,7 @@ steps:
   - template: install-dependencies.yml
 
   - script: |
-      pip install invoke towncrier readme-renderer[md] twine
+      pip install invoke towncrier readme-renderer[md] twine parver
       inv clean
       inv build
       twine check dist/*

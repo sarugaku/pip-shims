@@ -196,9 +196,8 @@ class _shims(object):
                 "9999",
             ),
             "SourceDistribution": (
-                "distributions.source.SourceDistribution",
-                "19.1.2",
-                "9999",
+                ("operations.prepare.IsSDist", "7.0.0", "19.1.1"),
+                ("distributions.source.SourceDistribution", "19.1.2", "9999"),
             ),
             "WheelDistribution": (
                 "distributions.wheel.WheelDistribution",

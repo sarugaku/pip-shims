@@ -33,6 +33,7 @@ from pip_shims import (
     RequirementTracker,
     Resolver,
     SafeFileCache,
+    SourceDistribution,
     UninstallationError,
     VcsSupport,
     Wheel,
@@ -306,7 +307,7 @@ def test_abstract_dist():
         "git+https://github.com/requests/requests.git@2.19.1#egg=requests"
     )
     abs_dist = make_abstract_dist(ireq)
-    assert abs_dist.__class__.__name__ == "IsSDist"
+    assert abs_dist.__class__.__name__ == SourceDistribution.__name__
 
 
 def test_safe_file_cache():

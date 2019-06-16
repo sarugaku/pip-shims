@@ -170,7 +170,10 @@ class _shims(object):
             ),
             "RequirementSet": ("req.req_set.RequirementSet", "7.0.0", "9999"),
             "RequirementTracker": ("req.req_tracker.RequirementTracker", "7.0.0", "9999"),
-            "Resolver": ("resolve.Resolver", "7.0.0", "9999"),
+            "Resolver": (
+                ("resolve.Resolver", "7.0.0", "19.1.1"),
+                ("legacy_resolve.Resolver", "19.1.2", "9999"),
+            ),
             "SafeFileCache": ("download.SafeFileCache", "7.0.0", "9999"),
             "UninstallPathSet": ("req.req_uninstall.UninstallPathSet", "7.0.0", "9999"),
             "url_to_path": ("download.url_to_path", "7.0.0", "9999"),

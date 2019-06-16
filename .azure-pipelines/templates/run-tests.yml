@@ -33,7 +33,7 @@ jobs:
 
   - script: |
       python -m pip install pipenv
-      python -m pipenv run pip install $(INSTALL_PIP_VERSION) --upgrade
+      python -m pipenv run python -m pip install $(INSTALL_PIP_VERSION) --upgrade
       pipenv install --dev
     displayName: 'Install Dependencies'
     env:

@@ -15,11 +15,11 @@ jobs:
           ${{ if contains(pip, 'github.com') }}:
             ${{ format('{0}-PIPMaster', py) }}:
               python.version: ${{ py }}
-              PIP_VERSION: ${{ pip }}
+              INSTALL_PIP_VERSION: ${{ pip }}
           ${{ if not(contains(pip, 'github.com')) }}:
             ${{ format('{0}{1}', py, pip) }}:
               python.version: ${{ py }}
-              PIP_VERSION: ${{ pip }}
+              INSTALL_PIP_VERSION: ${{ pip }}
   variables:
   - group: CI
   steps:
@@ -33,7 +33,7 @@ jobs:
 
   - script: |
       python -m pip install pipenv
-      python -m pipenv run pip install $(PIP_VERSION) --upgrade
+      python -m pipenv run pip install $(INSTALL_PIP_VERSION) --upgrade
       pipenv install --dev
     displayName: 'Install Dependencies'
     env:

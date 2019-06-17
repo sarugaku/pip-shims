@@ -8,8 +8,9 @@ pip-shims: Shims for importing packages from pip's internals.
 .. image:: https://img.shields.io/pypi/l/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
 
-.. image:: https://travis-ci.com/sarugaku/pip-shims.svg?branch=master
-    :target: https://travis-ci.com/sarugaku/pip-shims
+.. image:: https://dev.azure.com/sarugaku/pip-shims/_apis/build/status/sarugaku.pip-shims?branchName=master)](https://dev.azure.com/sarugaku/pip-shims/_build/latest?definitionId=5&branchName=master
+    :target: https://dev.azure.com/sarugaku/pip-shims/_build/latest?definitionId=5&branchName=master
+    :alt: Build Status
 
 .. image:: https://img.shields.io/pypi/pyversions/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
@@ -41,7 +42,7 @@ Install from `PyPI`_:
 
   ::
 
-    $ pipenv install --pre pip-shims
+    $ pipenv install pip-shims
 
 Install from `Github`_:
 

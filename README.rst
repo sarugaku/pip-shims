@@ -28,11 +28,13 @@ Warning
 
 .. warning::
    The authors of `pip`_ **do not condone** the use of this package. Relying on pip's
-   internals is a **dangerous** idea for your software as they are broken intentionally
-   and regularly.  This package may not always be completely updated up PyPI, so relying
-   on it may break your code! User beware!
+   internals is a **dangerous** idea for your software as they change regularly and
+   pip makes `no compatibility guarentees`_ about it's internals.  This package may not
+   always be completely up to date with/on PyPI, so relying on it may break your code!
+   User beware!
 
 .. _pip: https://github.com/pypa/pip
+.. _`no compatibility guarentees`: https://pip.pypa.io/en/stable/user_guide/#using-pip-from-your-program
 
 
 Installation

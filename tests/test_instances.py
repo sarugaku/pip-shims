@@ -4,6 +4,7 @@ from __future__ import absolute_import, unicode_literals
 import os
 import sys
 import textwrap
+from functools import partial
 
 import pytest
 import six
@@ -14,6 +15,7 @@ from pip_shims import (
     BadCommand,
     BestVersionAlreadyInstalled,
     CandidateEvaluator,
+    CandidatePreferences,
     Command,
     CommandError,
     ConfigOptionParser,
@@ -23,6 +25,7 @@ from pip_shims import (
     InstallationError,
     InstallRequirement,
     Link,
+    LinkCollector,
     PackageFinder,
     PipError,
     PreviousBuildDirError,
@@ -33,7 +36,10 @@ from pip_shims import (
     RequirementTracker,
     Resolver,
     SafeFileCache,
+    SearchScope,
+    SelectionPreferences,
     SourceDistribution,
+    TargetPython,
     UninstallationError,
     VcsSupport,
     Wheel,
@@ -45,6 +51,7 @@ from pip_shims import (
     index_group,
     install_req_from_editable,
     install_req_from_line,
+    install_req_from_req_string,
     is_archive_file,
     is_file_url,
     is_installable_dir,
@@ -197,21 +204,53 @@ def test_resolution(tmpdir, PipCommand):
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)
     assert session
-    finder_args = {
-        "find_links": pip_options.find_links,
-        "index_urls": [pip_options.index_url],
-        "trusted_hosts": pip_options.trusted_hosts,
-        "session": session,
-    }
+    # finder_args = {
+    #     "find_links": pip_options.find_links,
+    #     "index_urls": [pip_options.index_url],
+    #     "trusted_hosts": pip_options.trusted_hosts,
+    #     "session": session,
+    # }
     if parse_version(pip_version) > parse_version("19.1.1"):
-        finder_args["candidate_evaluator"] = CandidateEvaluator(
-            target_python=None,
-            prefer_binary=False,
+        index_urls = [pip_options.index_url] + pip_options.extra_index_urls
+        search_scope = SearchScope.create(
+            find_links=pip_options.find_links, index_urls=index_urls
+        )
+        link_collector = LinkCollector(session=session, search_scope=search_scope)
+        selection_prefs = SelectionPreferences(
+            True,
             allow_all_prereleases=False,
+            format_control=None,
+            prefer_binary=False,
             ignore_requires_python=False,
         )
+        target_python = TargetPython()
+        candidate_prefs = CandidatePreferences(
+            prefer_binary=selection_prefs.prefer_binary,
+            allow_all_prereleases=selection_prefs.allow_all_prereleases,
+        )
+        finder_args = {
+            "candidate_prefs": candidate_prefs,
+            "link_collector": link_collector,
+            "target_python": target_python,
+            "allow_yanked": selection_prefs.allow_yanked,
+            "format_control": selection_prefs.format_control,
+            "ignore_requires_python": selection_prefs.ignore_requires_python,
+        }
+        # finder_args["candidate_evaluator"] = CandidateEvaluator.create(
+        #     target_python=None,
+        #     prefer_binary=False,
+        #     allow_all_prereleases=False,
+        #     ignore_requires_python=False,
+        # )
     else:
-        finder_args["allow_all_prereleases"] = False
+        finder_args = {
+            "find_links": pip_options.find_links,
+            "index_urls": [pip_options.index_url],
+            "trusted_hosts": pip_options.trusted_hosts,
+            "session": session,
+            "allow_all_prereleases": False,
+        }
+        # finder_args["allow_all_prereleases"] = False
     finder = PackageFinder(**finder_args)
     ireq = InstallRequirement.from_line("requests>=2.18")
     if install_req_from_line:
@@ -230,7 +269,8 @@ def test_resolution(tmpdir, PipCommand):
         key=lambda c: c.version,
     )
     best_version = candidates[-1]
-    assert "pythonhosted" in best_version.location.url
+    location = getattr(best_version, "location", getattr(best_version, "link", None))
+    assert "pythonhosted" in location.url
     req_file = tmpdir.mkdir("req_dir").join("requirements.txt")
     req_file.write_text(
         textwrap.dedent(
@@ -241,7 +281,7 @@ def test_resolution(tmpdir, PipCommand):
         encoding="utf-8",
     )
     parsed_ireq = parse_requirements(
-        req_file.strpath, finder=finder, session=finder.session, options=pip_options
+        req_file.strpath, finder=finder, session=session, options=pip_options
     )
 
     build_dir = tmpdir.mkdir("build_dir")
@@ -257,7 +297,7 @@ def test_resolution(tmpdir, PipCommand):
             source_dir.strpath,
             download_dir=download_dir.strpath,
             wheel_download_dir=wheel_download_dir.strpath,
-            session=finder.session,
+            session=session,
             wheel_cache=wheel_cache,
         )
         results = reqset._prepare_file(finder, ireq)
@@ -272,16 +312,26 @@ def test_resolution(tmpdir, PipCommand):
         }
         resolver_kwargs = {
             "finder": finder,
-            "session": finder.session,
+            "session": session,
             "upgrade_strategy": "to-satisfy-only",
             "force_reinstall": False,
             "ignore_dependencies": False,
             "ignore_requires_python": False,
             "ignore_installed": True,
-            "isolated": False,
-            "wheel_cache": wheel_cache,
             "use_user_site": False,
         }
+        if parse_version(pip_version) > parse_version("19.1.1"):
+            make_install_req = partial(
+                install_req_from_req_string,
+                isolated=False,
+                wheel_cache=wheel_cache,
+                # use_pep517=use_pep517,
+            )
+            resolver_kwargs["make_install_req"] = make_install_req
+        else:
+            resolver_kwargs.update(
+                {"isolated": False, "wheel_cache": wheel_cache,}
+            )
         resolver = None
         preparer = None
         with RequirementTracker() as req_tracker:
@@ -354,21 +404,47 @@ def test_wheelbuilder(tmpdir, PipCommand):
     CACHE_DIR = tmpdir.mkdir("CACHE_DIR")
     pip_options.cache_dir = CACHE_DIR.strpath
     session = pip_command._build_session(pip_options)
-    finder_args = {
-        "find_links": pip_options.find_links,
-        "index_urls": [pip_options.index_url],
-        "trusted_hosts": pip_options.trusted_hosts,
-        "session": session,
-    }
     if parse_version(pip_version) > parse_version("19.1.1"):
-        finder_args["candidate_evaluator"] = CandidateEvaluator(
-            target_python=None,
-            prefer_binary=False,
+        index_urls = [pip_options.index_url] + pip_options.extra_index_urls
+        search_scope = SearchScope.create(
+            find_links=pip_options.find_links, index_urls=index_urls
+        )
+        link_collector = LinkCollector(session=session, search_scope=search_scope)
+        selection_prefs = SelectionPreferences(
+            True,
             allow_all_prereleases=False,
+            format_control=None,
+            prefer_binary=False,
             ignore_requires_python=False,
         )
+        target_python = TargetPython()
+        candidate_prefs = CandidatePreferences(
+            prefer_binary=selection_prefs.prefer_binary,
+            allow_all_prereleases=selection_prefs.allow_all_prereleases,
+        )
+        finder_args = {
+            "candidate_prefs": candidate_prefs,
+            "link_collector": link_collector,
+            "target_python": target_python,
+            "allow_yanked": selection_prefs.allow_yanked,
+            "format_control": selection_prefs.format_control,
+            "ignore_requires_python": selection_prefs.ignore_requires_python,
+        }
+        # finder_args["candidate_evaluator"] = CandidateEvaluator.create(
+        #     target_python=None,
+        #     prefer_binary=False,
+        #     allow_all_prereleases=False,
+        #     ignore_requires_python=False,
+        # )
     else:
-        finder_args["allow_all_prereleases"] = False
+        finder_args = {
+            "find_links": pip_options.find_links,
+            "index_urls": [pip_options.index_url] + pip_options.extra_index_urls,
+            "trusted_hosts": pip_options.trusted_hosts,
+            "session": session,
+            "allow_all_prereleases": False,
+        }
+        # finder_args["allow_all_prereleases"] = False
     finder = PackageFinder(**finder_args)
     build_dir = tmpdir.mkdir("build_dir")
     source_dir = tmpdir.mkdir("source_dir")
@@ -390,11 +466,9 @@ def test_wheelbuilder(tmpdir, PipCommand):
     # Ensure the remote artifact is downloaded locally. For wheels, it is
     # enough to just download because we'll use them directly. For an sdist,
     # we need to unpack so we can build it.
-    unpack_kwargs = {
-        "only_download": ireq.is_wheel,
-        "session": session,
-        "hashes": ireq.hashes(True),
-    }
+    unpack_kwargs = {"session": session, "hashes": ireq.hashes(True)}
+    if parse_version(pip_version) < parse_version("19.2.0"):
+        unpack_kwargs["only_download"] = ireq.is_wheel
     if parse_version(pip_version) >= parse_version("10"):
         unpack_kwargs["progress_bar"] = False
     if not is_file_url(ireq.link):
@@ -410,10 +484,21 @@ def test_wheelbuilder(tmpdir, PipCommand):
         kwargs.update({"progress_bar": "off", "build_isolation": False})
         wheel_cache = kwargs.pop("wheel_cache")
         with RequirementTracker() as req_tracker:
-            if req_tracker:
-                kwargs["req_tracker"] = req_tracker
-            preparer = RequirementPreparer(**kwargs)
-            builder = WheelBuilder(finder, preparer, wheel_cache)
+            # if req_tracker:
+            #     kwargs["req_tracker"] = req_tracker
+            preparer = RequirementPreparer(
+                kwargs["build_dir"],
+                kwargs["download_dir"],
+                kwargs["src_dir"],
+                kwargs["wheel_download_dir"],
+                kwargs["progress_bar"],
+                kwargs["build_isolation"],
+                req_tracker,
+            )
+            builder_args = [preparer, wheel_cache]
+            if parse_version(pip_version) < parse_version("19.3"):
+                builder_args = [finder] + builder_args
+            builder = WheelBuilder(*builder_args)
             output_file = builder._build_one(ireq, output_dir.strpath)
     assert output_file, output_file
 

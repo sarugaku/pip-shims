@@ -1,9 +1,11 @@
 # -*- coding=utf-8 -*-
 import importlib
+import inspect
 import os
 import sys
 from collections import namedtuple
 from contextlib import contextmanager
+from functools import partial
 
 import six
 
@@ -15,7 +17,7 @@ from six.moves import Callable  # type: ignore  # noqa  # isort:skip
 
 
 class _shims(object):
-    CURRENT_PIP_VERSION = "19.1.1"
+    CURRENT_PIP_VERSION = "19.3.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
 
@@ -39,6 +41,58 @@ class _shims(object):
     def _new(cls):
         return cls()
 
+    @staticmethod
+    def _override_cls(basecls, method, **default_kwargs):
+        target_method = getattr(basecls, method, None)
+        if target_method is None:
+            return basecls
+        inspected_args = inspect.getargs(target_method.__code__)
+        pos_args = inspected_args.args
+        # Spit back the base class if we can't find matching arguments
+        # to put defaults in place of
+        if not any(arg in pos_args for arg in list(default_kwargs.keys())):
+            return basecls
+        prepended_defaults = tuple()
+        # iterate from the function's argument order to make sure we fill this
+        # out in the correct order
+        for arg in pos_args:
+            if arg in default_kwargs:
+                prepended_defaults = prepended_defaults + (default_kwargs[arg],)
+        if prepended_defaults:
+            target_method.__defaults__ = prepended_defaults + target_method.__defaults__
+            setattr(basecls, method, target_method)
+        return basecls
+
+    @staticmethod
+    def _add_mixin(basecls, *mixins):
+        if not any(mixins):
+            return basecls
+        base_dict = basecls.__dict__.copy()
+        class_tuple = (basecls,)
+        for mixin in mixins:
+            if not mixin:
+                continue
+            mixin_dict = mixin.__dict__.copy()
+            base_dict.update(mixin_dict)
+            class_tuple = class_tuple + (mixin,)
+        base_dict.update(basecls.__dict__)
+        return type(basecls.__name__, class_tuple, base_dict)
+
+    @staticmethod
+    def add_proxy_create(basecls):
+        base_dict = basecls.__dict__.copy()
+        if "create" not in base_dict:
+            init = base_dict.get("__init__", None)
+
+            def create(cls, *args, **kwargs):
+                return cls(*args, **kwargs)
+
+            if init:
+                create.__module__ = init.__module__
+                create.__qualname__ = init.__qualname__.replace("__init__", "create")
+            base_dict["create"] = classmethod(create)
+        return type(basecls.__name__, (basecls,), base_dict)
+
     @property
     def __all__(self):
         return list(self._locations.keys())
@@ -61,11 +115,23 @@ class _shims(object):
             self.pip_version, _, _ = self.pip_version.rpartition(".")
         self.parsed_pip_version = self._parse(self.pip_version)
         self._contextmanagers = ("RequirementTracker",)
+        self._class_updates = {
+            "Command": {
+                "_override_cls": [
+                    "__init__",
+                    {"name": "PipCommand", "summary": "The default pip command."},
+                ],
+                "_add_mixin": ["SessionCommandMixin",],  # noqa:E231
+            },
+        }
         self._moves = {
             "InstallRequirement": {
                 "from_editable": "install_req_from_editable",
                 "from_line": "install_req_from_line",
-            }
+            },
+        }
+        self._shim_functions = {
+            "is_file_url": lambda link: link.url.lower().startswith("file:")
         }
         self._locations = {
             "parse_version": ("index.parse_version", "7", "9999"),
@@ -76,6 +142,11 @@ class _shims(object):
             "cmdoptions": (
                 ("cli.cmdoptions", "18.1", "9999"),
                 ("cmdoptions", "7.0.0", "18.0"),
+            ),
+            "SessionCommandMixin": (
+                "cli.req_command.SessionCommandMixin",
+                "19.3.0",
+                "9999",
             ),
             "Command": (
                 ("cli.base_command.Command", "18.1", "9999"),
@@ -132,14 +203,25 @@ class _shims(object):
                 ("req.constructors.install_req_from_line", "18.1", "9999"),
                 ("req.req_install.InstallRequirement.from_line", "7.0.0", "18.0"),
             ),
-            "is_archive_file": ("download.is_archive_file", "7.0.0", "9999"),
-            "is_file_url": ("download.is_file_url", "7.0.0", "9999"),
+            "install_req_from_req_string": (
+                "req.constructors.install_req_from_req_string",
+                "19.0",
+                "9999",
+            ),
+            "is_archive_file": (
+                ("req.constructors.is_archive_file", "19.3", "9999"),
+                ("download.is_archive_file", "7.0.0", "19.2.3"),
+            ),
+            "is_file_url": (("download.is_file_url", "7.0.0", "19.2.3"),),
             "unpack_url": ("download.unpack_url", "7.0.0", "9999"),
             "is_installable_dir": (
                 ("utils.misc.is_installable_dir", "10.0.0", "9999"),
                 ("utils.is_installable_dir", "7.0.0", "9.0.3"),
             ),
-            "Link": ("index.Link", "7.0.0", "9999"),
+            "Link": (
+                ("models.link.Link", "19.0.0", "9999"),
+                ("index.Link", "7.0.0", "18.1"),
+            ),
             "make_abstract_dist": (
                 (
                     "distributions.make_distribution_for_install_requirement",
@@ -159,9 +241,22 @@ class _shims(object):
                 ("cmdoptions.make_option_group", "7.0.0", "18.0"),
             ),
             "PackageFinder": ("index.PackageFinder", "7.0.0", "9999"),
-            "CandidateEvaluator": ("index.CandidateEvaluator", "19.1", "9999"),
+            "CandidateEvaluator": ("index.CandidateEvaluator", "19.1.0", "9999"),
+            "CandidatePreferences": ("index.CandidatePreferences", "19.2.0", "9999"),
+            "LinkCollector": ("collector.LinkCollector", "19.3.0", "9999"),
+            "LinkEvaluator": ("index.LinkEvaluator", "19.2.0", "9999"),
+            "TargetPython": ("models.target_python.TargetPython", "19.2.0", "9999"),
+            "SearchScope": ("models.search_scope.SearchScope", "19.2.0", "9999"),
+            "SelectionPreferences": (
+                "models.selection_prefs.SelectionPreferences",
+                "19.2.0",
+                "9999",
+            ),
             "parse_requirements": ("req.req_file.parse_requirements", "7.0.0", "9999"),
-            "path_to_url": ("download.path_to_url", "7.0.0", "9999"),
+            "path_to_url": (
+                ("download.path_to_url", "7.0.0", "19.2.3"),
+                ("utils.urls.path_to_url", "19.3.0", "9999"),
+            ),
             "PipError": ("exceptions.PipError", "7.0.0", "9999"),
             "RequirementPreparer": (
                 "operations.prepare.RequirementPreparer",
@@ -174,9 +269,15 @@ class _shims(object):
                 ("resolve.Resolver", "7.0.0", "19.1.1"),
                 ("legacy_resolve.Resolver", "19.1.2", "9999"),
             ),
-            "SafeFileCache": ("download.SafeFileCache", "7.0.0", "9999"),
+            "SafeFileCache": (
+                ("network.cache.SafeFileCache", "19.3.0", "9999"),
+                ("download.SafeFileCache", "7.0.0", "19.2.3"),
+            ),
             "UninstallPathSet": ("req.req_uninstall.UninstallPathSet", "7.0.0", "9999"),
-            "url_to_path": ("download.url_to_path", "7.0.0", "9999"),
+            "url_to_path": (
+                ("download.url_to_path", "7.0.0", "19.2.3"),
+                ("utils.urls.url_to_path", "19.3.0", "9999"),
+            ),
             "USER_CACHE_DIR": ("locations.USER_CACHE_DIR", "7.0.0", "9999"),
             "VcsSupport": (
                 ("vcs.VcsSupport", "7.0.0", "19.1.1"),
@@ -201,7 +302,8 @@ class _shims(object):
             "SourceDistribution": (
                 ("req.req_set.IsSDist", "7.0.0", "9.0.3"),
                 ("operations.prepare.IsSDist", "10.0.0", "19.1.1"),
-                ("distributions.source.SourceDistribution", "19.1.2", "9999"),
+                ("distributions.source.SourceDistribution", "19.1.2", "19.2.3"),
+                ("distributions.source.legacy.SourceDistribution", "19.3.0", "9999"),
             ),
             "WheelDistribution": (
                 "distributions.wheel.WheelDistribution",
@@ -219,7 +321,50 @@ class _shims(object):
             ),
         }
 
+    def _ensure_function(self, parent, funcname, func, is_prop=False, is_clsmethod=False):
+        """Given a module, a function name, and a function
+        object, attaches the given function to the module and
+        ensures it is named properly according to the provided argument
+        """
+        qualname = funcname
+        if getattr(parent, "__spec__", None) is not None:
+            module = parent.__name__
+        elif isinstance(parent, type) or getattr(parent, "__class__"):
+            qualname = "{0}.{1}".format(parent.__name__, qualname)
+            module = parent.__module__
+        else:
+            module = parent.__module__
+        try:
+            func.__name__ = funcname
+        except AttributeError:
+            if getattr(func, "__func__", None) is not None:
+                func = func.__func__
+            func.__name__ = funcname
+        func.__qualname__ = qualname
+
+        func.__module__ = module
+        if is_prop and isinstance(parent, type):
+            func = property(func)
+        elif is_clsmethod and isinstance(parent, type):
+            func = classmethod(func)
+        setattr(parent, funcname, func)
+        # If function's direct parent is a module let's replace it
+        # in our module cache and in the import cache
+        if not getattr(parent, "__spec__", None):
+            if parent.__module__ in sys.modules:
+                setattr(sys.modules[parent.__module__], parent.__name__, parent)
+            if parent.__module__ in self._modules:
+                setattr(self._modules[parent.__module__], parent.__name__, parent)
+        else:
+            self._modules[parent.__name__] = parent
+            sys.modules[parent.__name__] = parent
+        return parent, func
+
     def _ensure_methods(self, cls, classname, *methods):
+        """Given a base class, a new name, and any number of functions to
+        attach, turns those functions into classmethods, attaches them,
+        and returns an updated class object.
+        """
         method_names = [m[0] for m in methods]
         if all(getattr(cls, m, None) for m in method_names):
             return cls
@@ -241,6 +386,14 @@ class _shims(object):
         return type_
 
     def _get_module_paths(self, module, base_path=None):
+        """Given a module name and a base import path, provide
+        a sorted list of possible unique import paths.
+
+        :param str module: An package to import
+        :param Optional[str] base_path: The base path to import, e.g. pip or 'fakepip'.
+            This is mainly useful if you are vendoring pip.
+        :returns: A list of import paths in order of import preference.
+        """
         if not base_path:
             base_path = self.BASE_IMPORT_PATH
         module = self._locations[module]
@@ -251,6 +404,14 @@ class _shims(object):
         return self.sort_paths(module_paths, base_path)
 
     def _get_remapped_methods(self, moved_package):
+        """Given an import target, provide method mappings for any
+        updated import paths.
+
+        :param Tuple[str, str] moved_package: A 2-tuple of package location, import
+            target.
+        :returns: A pair of dictionaries mapping the old-to-new and new-to-old import
+            path, including target, name, location, and modules.
+        """
         original_base, original_target = moved_package
         original_import = self._import(self._locations[original_target])
         old_to_new = {}
@@ -269,6 +430,11 @@ class _shims(object):
                 "location": self._locations[new_method_name],
                 "module": self._import(self._locations[new_method_name]),
             }
+            # XXX: If a move is indicated from e.g. CandidateEvaluator.__init__
+            # XXX: to CandidateEvaluator.create (new), this will say the target
+            # XXX: is 'CandidateEvaluator', the location is the module path,
+            # XXX: the module itself is the originally imported module,
+            # XXX: And we need to map 'create'
             new_to_old[new_method_name] = {
                 "target": original_target,
                 "name": method_name,
@@ -278,6 +444,13 @@ class _shims(object):
         return (old_to_new, new_to_old)
 
     def _import_moved_module(self, moved_package):
+        """Given an import that has been moved over time, import it for the current
+        version of pip and translate any requisite method or function locations.
+
+        :param Tuple[str, str] moved_package: A 2-tuple describing the package and
+            import path needed.
+        :returns: An imported module.
+        """
         old_to_new, new_to_old = self._get_remapped_methods(moved_package)
         imported = None
         method_map = []
@@ -296,6 +469,10 @@ class _shims(object):
         return
 
     def _check_moved_methods(self, search_pth, moves):
+        """
+        Given a search path and a dictionary mapping import locations (old and new),
+        return the new location of the given import if it has been remapped.
+        """
         module_paths = [
             self.get_package(pth) for pth in self._get_module_paths(search_pth)
         ]
@@ -304,20 +481,36 @@ class _shims(object):
         ]
         return next(iter(moved_methods), None)
 
+    def _import_with_override(self, target, imported):
+        class_updates = super(_shims, self).__getattribute__("_class_updates")
+        for update_method, method_args in class_updates[target].items():
+            local_method = getattr(_shims, update_method)
+            if update_method == "_override_cls":
+                method, override_defaults = method_args
+                imported = local_method(imported, method, **override_defaults)
+            elif update_method == "_add_mixin":
+                mixins = [getattr(self, arg) for arg in method_args]
+                imported = local_method(imported, *mixins)
+        return imported
+
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")
         contextmanagers = super(_shims, self).__getattribute__("_contextmanagers")
+        class_updates = super(_shims, self).__getattribute__("_class_updates")
         moves = super(_shims, self).__getattribute__("_moves")
-        if args[0] in locations:
-            moved_package = self._check_moved_methods(args[0], moves)
+        target = args[0]
+        if target in locations:
+            moved_package = self._check_moved_methods(target, moves)
             if moved_package:
                 imported = self._import_moved_module(moved_package)
                 if imported:
                     return imported
             else:
-                imported = self._import(locations[args[0]])
-                if not imported and args[0] in contextmanagers:
+                imported = self._import(locations[target])
+                if not imported and target in contextmanagers:
                     return self.nullcontext
+                if getattr(imported, "__class__", None) and target in class_updates:
+                    imported = self._import_with_override(target, imported)
                 return imported
         return super(_shims, self).__getattribute__(*args, **kwargs)
 
@@ -373,6 +566,18 @@ class _shims(object):
             for pkg, m in modules
             if m is not None
         ]
+        imports = []
+        shim = None
+        for pkg, m in modules:
+            if m is None:
+                continue
+            imported = getattr(m, pkg, self.none_or_ctxmanager(pkg))
+            if imported is not None:
+                imports.append(imported)
+            if pkg in self._shim_functions and shim is None:
+                module, shim = self._ensure_function(m, pkg, self._shim_functions[pkg])
+        if not imports and shim is not None:
+            return shim
         return next(iter(imports), None)
 
     def _import(self, module_paths, base_path=None):

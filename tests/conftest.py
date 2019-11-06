@@ -1,6 +1,7 @@
 # -*- coding=utf-8 -*-
-from pip_shims import Command
 import pytest
+
+from pip_shims import Command
 
 
 class _PipCommand(Command):

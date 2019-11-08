@@ -238,7 +238,6 @@ def test_resolution(tmpdir, PipCommand):
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,
-                "link_collector": link_collector,
                 "target_python": target_python,
                 "allow_yanked": selection_prefs.allow_yanked,
                 "format_control": selection_prefs.format_control,
@@ -441,7 +440,6 @@ def test_wheelbuilder(tmpdir, PipCommand):
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,
-                "link_collector": link_collector,
                 "target_python": target_python,
                 "allow_yanked": selection_prefs.allow_yanked,
                 "format_control": selection_prefs.format_control,

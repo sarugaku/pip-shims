@@ -327,13 +327,16 @@ class _shims(object):
         ensures it is named properly according to the provided argument
         """
         qualname = funcname
-        if getattr(parent, "__spec__", None) is not None:
+        parent_is_module = inspect.ismodule(parent)
+        parent_is_class = inspect.isclass(parent)
+        module = None
+        if parent_is_module:
             module = parent.__name__
-        elif isinstance(parent, type) or getattr(parent, "__class__"):
+        elif inspect.isclass(parent):
             qualname = "{0}.{1}".format(parent.__name__, qualname)
-            module = parent.__module__
+            module = getattr(parent, "__module__", None)
         else:
-            module = parent.__module__
+            module = getattr(parent, "__module__", None)
         try:
             func.__name__ = funcname
         except AttributeError:
@@ -343,18 +346,18 @@ class _shims(object):
         func.__qualname__ = qualname
 
         func.__module__ = module
-        if is_prop and isinstance(parent, type):
+        if is_prop and parent_is_class:
             func = property(func)
-        elif is_clsmethod and isinstance(parent, type):
+        elif is_clsmethod and parent_is_class:
             func = classmethod(func)
         setattr(parent, funcname, func)
         # If function's direct parent is a module let's replace it
         # in our module cache and in the import cache
-        if not getattr(parent, "__spec__", None):
-            if parent.__module__ in sys.modules:
-                setattr(sys.modules[parent.__module__], parent.__name__, parent)
-            if parent.__module__ in self._modules:
-                setattr(self._modules[parent.__module__], parent.__name__, parent)
+        if not parent_is_module and module is not None:
+            if module in sys.modules:
+                setattr(sys.modules[module], parent.__name__, parent)
+            if module in self._modules:
+                setattr(self._modules[module], parent.__name__, parent)
         else:
             self._modules[parent.__name__] = parent
             sys.modules[parent.__name__] = parent
@@ -461,7 +464,7 @@ class _shims(object):
             if not imported:
                 imported = self._modules[new_target] = new_to_old[new_name]["module"]
             method_map.append((old_method, remapped["module"]))
-        if getattr(imported, "__class__", "") == type:
+        if inspect.isclass(imported):
             imported = self._ensure_methods(imported, new_target, *method_map)
         self._modules[new_target] = imported
         if imported:
@@ -509,7 +512,7 @@ class _shims(object):
                 imported = self._import(locations[target])
                 if not imported and target in contextmanagers:
                     return self.nullcontext
-                if getattr(imported, "__class__", None) and target in class_updates:
+                if inspect.isclass(imported) and target in class_updates:
                     imported = self._import_with_override(target, imported)
                 return imported
         return super(_shims, self).__getattribute__(*args, **kwargs)

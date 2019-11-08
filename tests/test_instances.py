@@ -484,17 +484,9 @@ def test_wheelbuilder(tmpdir, PipCommand):
         kwargs.update({"progress_bar": "off", "build_isolation": False})
         wheel_cache = kwargs.pop("wheel_cache")
         with RequirementTracker() as req_tracker:
-            # if req_tracker:
-            #     kwargs["req_tracker"] = req_tracker
-            preparer = RequirementPreparer(
-                kwargs["build_dir"],
-                kwargs["download_dir"],
-                kwargs["src_dir"],
-                kwargs["wheel_download_dir"],
-                kwargs["progress_bar"],
-                kwargs["build_isolation"],
-                req_tracker,
-            )
+            if req_tracker:
+                kwargs["req_tracker"] = req_tracker
+            preparer = RequirementPreparer(**kwargs)
             builder_args = [preparer, wheel_cache]
             if parse_version(pip_version) < parse_version("19.3"):
                 builder_args = [finder] + builder_args

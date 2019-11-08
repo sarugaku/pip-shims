@@ -215,7 +215,6 @@ def test_resolution(tmpdir, PipCommand):
         search_scope = SearchScope.create(
             find_links=pip_options.find_links, index_urls=index_urls
         )
-        link_collector = LinkCollector(session=session, search_scope=search_scope)
         selection_prefs = SelectionPreferences(
             True,
             allow_all_prereleases=False,
@@ -228,14 +227,24 @@ def test_resolution(tmpdir, PipCommand):
             prefer_binary=selection_prefs.prefer_binary,
             allow_all_prereleases=selection_prefs.allow_all_prereleases,
         )
-        finder_args = {
-            "candidate_prefs": candidate_prefs,
-            "link_collector": link_collector,
-            "target_python": target_python,
-            "allow_yanked": selection_prefs.allow_yanked,
-            "format_control": selection_prefs.format_control,
-            "ignore_requires_python": selection_prefs.ignore_requires_python,
-        }
+        if parse_version(pip_version) > parse_version("19.2.3"):
+            link_collector = LinkCollector(session=session, search_scope=search_scope)
+            finder_args = {"link_collector": link_collector}
+        else:
+            finder_args = {
+                "search_scope": search_scope,
+                "session": session,
+            }
+        finder_args.update(
+            {
+                "candidate_prefs": candidate_prefs,
+                "link_collector": link_collector,
+                "target_python": target_python,
+                "allow_yanked": selection_prefs.allow_yanked,
+                "format_control": selection_prefs.format_control,
+                "ignore_requires_python": selection_prefs.ignore_requires_python,
+            }
+        )
         # finder_args["candidate_evaluator"] = CandidateEvaluator.create(
         #     target_python=None,
         #     prefer_binary=False,
@@ -409,7 +418,6 @@ def test_wheelbuilder(tmpdir, PipCommand):
         search_scope = SearchScope.create(
             find_links=pip_options.find_links, index_urls=index_urls
         )
-        link_collector = LinkCollector(session=session, search_scope=search_scope)
         selection_prefs = SelectionPreferences(
             True,
             allow_all_prereleases=False,
@@ -422,14 +430,24 @@ def test_wheelbuilder(tmpdir, PipCommand):
             prefer_binary=selection_prefs.prefer_binary,
             allow_all_prereleases=selection_prefs.allow_all_prereleases,
         )
-        finder_args = {
-            "candidate_prefs": candidate_prefs,
-            "link_collector": link_collector,
-            "target_python": target_python,
-            "allow_yanked": selection_prefs.allow_yanked,
-            "format_control": selection_prefs.format_control,
-            "ignore_requires_python": selection_prefs.ignore_requires_python,
-        }
+        if parse_version(pip_version) > parse_version("19.2.3"):
+            link_collector = LinkCollector(session=session, search_scope=search_scope)
+            finder_args = {"link_collector": link_collector}
+        else:
+            finder_args = {
+                "search_scope": search_scope,
+                "session": session,
+            }
+        finder_args.update(
+            {
+                "candidate_prefs": candidate_prefs,
+                "link_collector": link_collector,
+                "target_python": target_python,
+                "allow_yanked": selection_prefs.allow_yanked,
+                "format_control": selection_prefs.format_control,
+                "ignore_requires_python": selection_prefs.ignore_requires_python,
+            }
+        )
         # finder_args["candidate_evaluator"] = CandidateEvaluator.create(
         #     target_python=None,
         #     prefer_binary=False,

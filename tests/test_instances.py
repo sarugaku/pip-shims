@@ -328,7 +328,7 @@ def test_resolution(tmpdir, PipCommand):
             "ignore_installed": True,
             "use_user_site": False,
         }
-        if parse_version(pip_version) > parse_version("19.1.1"):
+        if parse_version(pip_version) >= parse_version("19.3"):
             make_install_req = partial(
                 install_req_from_req_string,
                 isolated=False,

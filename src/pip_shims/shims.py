@@ -64,9 +64,15 @@ class _shims(types.ModuleType):
         for arg in pos_args:
             if arg in default_kwargs:
                 prepended_defaults = prepended_defaults + (default_kwargs[arg],)
-        if prepended_defaults:
-            target_method.__defaults__ = prepended_defaults + target_method.__defaults__
-            setattr(basecls, method, target_method)
+        if not prepended_defaults:
+            return basecls
+        if six.PY2 and inspect.ismethod(target_method):
+            new_defaults = prepended_defaults + target_method.__func__.__defaults__
+            target_method.__func__.__defaults__ = new_defaults
+        else:
+            new_defaults = prepended_defaults + target_method.__defaults__
+            target_method.__defaults__ = new_defaults
+        setattr(basecls, method, target_method)
         return basecls
 
     @staticmethod

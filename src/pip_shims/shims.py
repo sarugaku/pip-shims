@@ -3,6 +3,7 @@ import importlib
 import inspect
 import os
 import sys
+import types
 from collections import namedtuple
 from contextlib import contextmanager
 from functools import partial
@@ -16,7 +17,7 @@ from six.moves import Callable  # type: ignore  # noqa  # isort:skip
 # format: on
 
 
-class _shims(object):
+class _shims(types.ModuleType):
     CURRENT_PIP_VERSION = "19.3.1"
     BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
     path_info = namedtuple("PathInfo", "path start_version end_version")
@@ -216,8 +217,11 @@ class _shims(object):
                 ("req.constructors.is_archive_file", "19.3", "9999"),
                 ("download.is_archive_file", "7.0.0", "19.2.3"),
             ),
-            "is_file_url": (("download.is_file_url", "7.0.0", "19.2.3"),),
-            "unpack_url": ("download.unpack_url", "7.0.0", "9999"),
+            "is_file_url": ("download.is_file_url", "7.0.0", "19.2.3",),
+            "unpack_url": (
+                ("download.unpack_url", "7.0.0", "19.3.9"),
+                ("operations.prepare.unpack_url", "20.0", "9999"),
+            ),
             "is_installable_dir": (
                 ("utils.misc.is_installable_dir", "10.0.0", "9999"),
                 ("utils.is_installable_dir", "7.0.0", "9.0.3"),
@@ -244,11 +248,26 @@ class _shims(object):
                 ("cli.cmdoptions.make_option_group", "18.1", "9999"),
                 ("cmdoptions.make_option_group", "7.0.0", "18.0"),
             ),
-            "PackageFinder": ("index.PackageFinder", "7.0.0", "9999"),
-            "CandidateEvaluator": ("index.CandidateEvaluator", "19.1.0", "9999"),
-            "CandidatePreferences": ("index.CandidatePreferences", "19.2.0", "9999"),
-            "LinkCollector": ("collector.LinkCollector", "19.3.0", "9999"),
-            "LinkEvaluator": ("index.LinkEvaluator", "19.2.0", "9999"),
+            "PackageFinder": (
+                ("index.PackageFinder", "7.0.0", "19.9"),
+                ("index.package_finder.PackageFinder", "20.0", "9999"),
+            ),
+            "CandidateEvaluator": (
+                ("index.CandidateEvaluator", "19.1.0", "19.3.9"),
+                ("index.package_finder.CandidateEvaluator", "20.0", "9999"),
+            ),
+            "CandidatePreferences": (
+                ("index.CandidatePreferences", "19.2.0", "19.9"),
+                ("index.package_finder.CandidatePreferences", "20.0", "9999"),
+            ),
+            "LinkCollector": (
+                ("collector.LinkCollector", "19.3.0", "19.9"),
+                ("index.collector.LinkCollector", "20.0", "9999"),
+            ),
+            "LinkEvaluator": (
+                ("index.LinkEvaluator", "19.2.0", "19.9"),
+                ("index.package_finder.LinkEvaluator", "20.0", "9999"),
+            ),
             "TargetPython": ("models.target_python.TargetPython", "19.2.0", "9999"),
             "SearchScope": ("models.search_scope.SearchScope", "19.2.0", "9999"),
             "SelectionPreferences": (
@@ -292,7 +311,10 @@ class _shims(object):
                 ("cache.WheelCache", "10.0.0", "9999"),
                 ("wheel.WheelCache", "7", "9.0.3"),
             ),
-            "WheelBuilder": ("wheel.WheelBuilder", "7.0.0", "9999"),
+            "WheelBuilder": (
+                ("wheel.WheelBuilder", "7.0.0", "19.9"),
+                ("wheel_builder.WheelBuilder", "20.0", "9999"),
+            ),
             "AbstractDistribution": (
                 "distributions.base.AbstractDistribution",
                 "19.1.2",
@@ -307,7 +329,8 @@ class _shims(object):
                 ("req.req_set.IsSDist", "7.0.0", "9.0.3"),
                 ("operations.prepare.IsSDist", "10.0.0", "19.1.1"),
                 ("distributions.source.SourceDistribution", "19.1.2", "19.2.3"),
-                ("distributions.source.legacy.SourceDistribution", "19.3.0", "9999"),
+                ("distributions.source.legacy.SourceDistribution", "19.3.0", "19.9"),
+                ("distributions.source.SourceDistribution", "20.0", "9999"),
             ),
             "WheelDistribution": (
                 "distributions.wheel.WheelDistribution",
@@ -331,6 +354,8 @@ class _shims(object):
         ensures it is named properly according to the provided argument
         """
         qualname = funcname
+        if parent is None:
+            parent = self
         parent_is_module = inspect.ismodule(parent)
         parent_is_class = inspect.isclass(parent)
         module = None
@@ -568,21 +593,16 @@ class _shims(object):
             (package_name, self.import_module(m))
             for m, package_name in map(self.get_package, modules)
         ]
-        imports = [
-            getattr(m, pkg, self.none_or_ctxmanager(pkg))
-            for pkg, m in modules
-            if m is not None
-        ]
         imports = []
         shim = None
         for pkg, m in modules:
+            if pkg in self._shim_functions and shim is None:
+                module, shim = self._ensure_function(m, pkg, self._shim_functions[pkg])
             if m is None:
                 continue
             imported = getattr(m, pkg, self.none_or_ctxmanager(pkg))
             if imported is not None:
                 imports.append(imported)
-            if pkg in self._shim_functions and shim is None:
-                module, shim = self._ensure_function(m, pkg, self._shim_functions[pkg])
         if not imports and shim is not None:
             return shim
         return next(iter(imports), None)

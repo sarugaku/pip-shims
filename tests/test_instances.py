@@ -320,7 +320,6 @@ def test_resolution(tmpdir, PipCommand):
         }
         resolver_kwargs = {
             "finder": finder,
-            "session": session,
             "upgrade_strategy": "to-satisfy-only",
             "force_reinstall": False,
             "ignore_dependencies": False,
@@ -328,6 +327,12 @@ def test_resolution(tmpdir, PipCommand):
             "ignore_installed": True,
             "use_user_site": False,
         }
+        if parse_version(pip_version) > parse_version("19.99.99"):
+            preparer_kwargs.update(
+                {"session": session, "finder": finder,}
+            )
+        else:
+            resolver_kwargs["session"] = session
         if parse_version(pip_version) >= parse_version("19.3"):
             make_install_req = partial(
                 install_req_from_req_string,
@@ -353,7 +358,10 @@ def test_resolution(tmpdir, PipCommand):
             reqset.add_requirement(ireq)
             resolver = Resolver(**resolver_kwargs)
             resolver.require_hashes = False
-            results = resolver._resolve_one(reqset, ireq)
+            resolve_one_kwargs = {}
+            if parse_version(pip_version) > parse_version("19.99.99"):
+                resolve_one_kwargs["require_hashes"] = resolver.require_hashes
+            results = resolver._resolve_one(reqset, ireq, **resolve_one_kwargs)
             reqset.cleanup_files()
     results = set(results)
     result_names = [r.name for r in results]
@@ -474,6 +482,10 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "wheel_download_dir": wheel_download_dir.strpath,
         "wheel_cache": wheel_cache,
     }
+    if parse_version(pip_version) > parse_version("19.99.99"):
+        kwargs.update(
+            {"session": session, "finder": finder,}
+        )
     ireq = InstallRequirement.from_editable(
         "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
     )

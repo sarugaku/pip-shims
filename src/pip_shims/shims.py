@@ -6,7 +6,6 @@ import sys
 import types
 from collections import namedtuple
 from contextlib import contextmanager
-from functools import partial
 
 import six
 
@@ -603,7 +602,7 @@ class _shims(types.ModuleType):
         shim = None
         for pkg, m in modules:
             if pkg in self._shim_functions and shim is None:
-                module, shim = self._ensure_function(m, pkg, self._shim_functions[pkg])
+                _, shim = self._ensure_function(m, pkg, self._shim_functions[pkg])
             if m is None:
                 continue
             imported = getattr(m, pkg, self.none_or_ctxmanager(pkg))

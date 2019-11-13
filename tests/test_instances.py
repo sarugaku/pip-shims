@@ -329,7 +329,12 @@ def test_resolution(tmpdir, PipCommand):
         }
         if parse_version(pip_version) > parse_version("19.99.99"):
             preparer_kwargs.update(
-                {"session": session, "finder": finder,}
+                {
+                    "session": session,
+                    "finder": finder,
+                    "require_hashes": False,
+                    "use_user_site": False,
+                }
             )
         else:
             resolver_kwargs["session"] = session
@@ -359,8 +364,6 @@ def test_resolution(tmpdir, PipCommand):
             resolver = Resolver(**resolver_kwargs)
             resolver.require_hashes = False
             resolve_one_kwargs = {}
-            if parse_version(pip_version) > parse_version("19.99.99"):
-                resolve_one_kwargs["require_hashes"] = resolver.require_hashes
             results = resolver._resolve_one(reqset, ireq, **resolve_one_kwargs)
             reqset.cleanup_files()
     results = set(results)
@@ -494,13 +497,19 @@ def test_wheelbuilder(tmpdir, PipCommand):
     # Ensure the remote artifact is downloaded locally. For wheels, it is
     # enough to just download because we'll use them directly. For an sdist,
     # we need to unpack so we can build it.
-    unpack_kwargs = {"session": session, "hashes": ireq.hashes(True)}
+    unpack_kwargs = {
+        "session": session,
+        "hashes": ireq.hashes(True),
+        "link": ireq.link,
+        "location": ireq.source_dir,
+        "download_dir": kwargs["download_dir"],
+    }
     if parse_version(pip_version) < parse_version("19.2.0"):
         unpack_kwargs["only_download"] = ireq.is_wheel
     if parse_version(pip_version) >= parse_version("10"):
-        unpack_kwargs["progress_bar"] = False
+        unpack_kwargs["progress_bar"] = "off"
     if not is_file_url(ireq.link):
-        unpack_url(ireq.link, ireq.source_dir, kwargs["download_dir"], **unpack_kwargs)
+        unpack_url(**unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
         kwargs["session"] = finder.session
@@ -509,7 +518,14 @@ def test_wheelbuilder(tmpdir, PipCommand):
         builder = WheelBuilder(reqset, finder)
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:
-        kwargs.update({"progress_bar": "off", "build_isolation": False})
+        kwargs.update(
+            {
+                "progress_bar": "off",
+                "build_isolation": False,
+                "use_user_site": False,
+                "require_hashes": False,
+            }
+        )
         wheel_cache = kwargs.pop("wheel_cache")
         with RequirementTracker() as req_tracker:
             if req_tracker:

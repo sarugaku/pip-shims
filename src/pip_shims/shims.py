@@ -10,6 +10,8 @@ from contextlib import contextmanager
 import six
 from packaging.version import parse as parse_version
 
+from .utils import get_method_args
+
 # format: off
 six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
 from six.moves import Callable  # type: ignore  # noqa  # isort:skip
@@ -62,14 +64,25 @@ class _shims(types.ModuleType):
         # out in the correct order
         for arg in pos_args:
             if arg in default_kwargs:
-                prepended_defaults = prepended_defaults + (default_kwargs[arg],)
+                new_default = default_kwargs[arg]
+                if inspect.isfunction(new_default) or inspect.ismethod(new_default):
+                    new_default = new_default()
+                    prepended_defaults = prepended_defaults + (new_default,)
+                else:
+                    prepended_defaults = prepended_defaults + (new_default,)
         if not prepended_defaults:
             return basecls
         if six.PY2 and inspect.ismethod(target_method):
-            new_defaults = prepended_defaults + target_method.__func__.__defaults__
+            original_defaults = getattr(target_method.__func__, "__defaults__", tuple())
+            if original_defaults is None:
+                original_defaults = tuple()
+            new_defaults = prepended_defaults + original_defaults
             target_method.__func__.__defaults__ = new_defaults
         else:
-            new_defaults = prepended_defaults + target_method.__defaults__
+            original_defaults = getattr(target_method, "__defaults__", tuple())
+            if original_defaults is None:
+                original_defaults = tuple()
+            new_defaults = prepended_defaults + original_defaults
             target_method.__defaults__ = new_defaults
         setattr(basecls, method, target_method)
         return basecls
@@ -104,6 +117,26 @@ class _shims(types.ModuleType):
             base_dict["create"] = classmethod(create)
         return type(basecls.__name__, (basecls,), base_dict)
 
+    @contextmanager
+    def get_req_tracker(self):
+        root = os.environ.get("PIP_REQ_TRACKER")
+        ReqTracker = getattr(self, "RequirementTracker", None)
+        if ReqTracker is not None:
+            fn, fn_args = get_method_args(ReqTracker.__init__)
+            if "root" in fn_args.args:
+                if root is None:
+                    TempDirectory = getattr(self, "TempDirectory", None)
+                    with TempDirectory(kind="req-tracker") as tempdir:
+                        os.environ["PIP_REQ_TRACKER"] = tempdir.path
+                        yield ReqTracker(tempdir.path)
+                else:
+                    yield ReqTracker(root)
+            else:
+                yield ReqTracker()
+
+    def _get_import(self, location):
+        return getattr(self, location, None)
+
     @property
     def __all__(self):
         return list(self._locations.keys())
@@ -132,6 +165,9 @@ class _shims(types.ModuleType):
                     {"name": "PipCommand", "summary": "The default pip command."},
                 ],
                 "_add_mixin": ["SessionCommandMixin",],  # noqa:E231
+            },
+            "RequirementTracker": {
+                "_override_cls": ["__init__", {"root": self.override_temp_root}]
             },
         }
         self._moves = {
@@ -285,6 +321,7 @@ class _shims(types.ModuleType):
                 ("utils.urls.path_to_url", "19.3.0", "9999"),
             ),
             "PipError": ("exceptions.PipError", "7.0.0", "9999"),
+            "TempDirectory": ("utils.temp_dir.TempDirectory", "7.0.0", "9999"),
             "RequirementPreparer": (
                 "operations.prepare.RequirementPreparer",
                 "7",
@@ -351,6 +388,11 @@ class _shims(types.ModuleType):
                 ({"setuptools", "pip", "distribute", "wheel"}, "7.0.0", "8.1.2"),
             ),
         }
+
+    def override_temp_root(self):
+        return os.environ.get(
+            "PIP_REQ_TRACKER", getattr(self, "TempDirectory")(kind="req-tracker").path
+        )
 
     def _ensure_function(self, parent, funcname, func, is_prop=False, is_clsmethod=False):
         """Given a module, a function name, and a function

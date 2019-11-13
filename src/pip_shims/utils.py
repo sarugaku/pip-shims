@@ -1,10 +1,11 @@
 # -*- coding=utf-8 -*-
-from functools import wraps
+import inspect
 import sys
+from functools import wraps
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
-    STRING_TYPES = STRING_TYPES + (unicode,)
+    STRING_TYPES = STRING_TYPES + (unicode,)  # noqa:F821
 
 
 def memoize(obj):
@@ -16,6 +17,7 @@ def memoize(obj):
         if key not in cache:
             cache[key] = obj(*args, **kwargs)
         return cache[key]
+
     return memoizer
 
 
@@ -33,3 +35,15 @@ def get_package(module, subimport=None):
     else:
         module, _, package = module.rpartition(".")
     return module, package
+
+
+def get_method_args(target_method):
+    try:
+        inspected_args = inspect.getargs(target_method.__code__)
+    except AttributeError:
+        target_func = getattr(target_method, "__func__", None)
+        if target_func is not None:
+            inspected_args = inspect.getargs(target_func.__code__)
+    else:
+        target_func = target_method
+    return target_func, inspected_args

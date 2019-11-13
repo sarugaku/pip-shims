@@ -2,6 +2,7 @@
 
 import collections
 import contextlib
+import functools
 import importlib
 import inspect
 import operator
@@ -220,6 +221,9 @@ class PipVersionRange(collections.Sequence):
             raise ValueError("Start version must come before end version")
         self._versions = (start, end)
 
+    def __str__(self):
+        return "{0!s} -> {1!s}".format(self._versions[0], self._versions[-1])
+
     @property
     def base_import_paths(self):
         return set([version.base_import_path for version in self._versions])
@@ -241,6 +245,13 @@ class PipVersionRange(collections.Sequence):
 
     def __len__(self):
         return len(self._versions)
+
+    def __lt__(self, other):
+        return (other.is_valid() and not self.is_valid()) or (
+            not (self.is_valid() or other.is_valid())
+            or (self.is_valid() and other.is_valid())
+            and self._versions[-1] < other._versions[-1]
+        )
 
     def __hash__(self):
         return hash(self._versions)
@@ -341,7 +352,9 @@ class ShimmedPath:
     def _import_module(cls, module):
         # type: (str) -> Optional[types.ModuleType]
         if module in ShimmedPath.__modules:
-            return ShimmedPath.__modules[module]
+            result = ShimmedPath.__modules[module]
+            if result is not None:
+                return result
         try:
             imported = importlib.import_module(module)
         except ImportError:
@@ -663,7 +676,7 @@ class ShimmedPathCollection(object):
         self.add_path(new_path)
 
     def _sort_paths(self):
-        return sorted(self.paths, key=operator.attrgetter("is_valid"), reverse=True)
+        return sorted(self.paths, key=operator.attrgetter("version_range"), reverse=True)
 
     def _get_top_path(self):
         return next(iter(self._sort_paths()), self._default)
@@ -678,6 +691,10 @@ class ShimmedPathCollection(object):
     def shim(self):
         top_path = self._get_top_path()
         result = self.traverse(top_path)
+        if result == top_path.nullcontext and self._default is not None:
+            default_result = self.traverse(self._default)
+            if default_result:
+                return default_result
         if result is not None:
             return result
         if self._default is not None:
@@ -905,6 +922,21 @@ RequirementTracker = ShimmedPathCollection(
     "RequirementTracker", ImportTypes.CONTEXTMANAGER
 )
 RequirementTracker.create_path("req.req_tracker.RequirementTracker", "7.0.0", "9999")
+
+TempDirectory = ShimmedPathCollection("TempDirectory", ImportTypes.CLASS)
+TempDirectory.create_path("utils.temp_dir.TempDirectory", "7.0.0", "9999")
+
+get_requirement_tracker = ShimmedPathCollection(
+    "get_requirement_tracker", ImportTypes.CONTEXTMANAGER
+)
+get_requirement_tracker.set_default(
+    lambda: backports.get_requirement_tracker(
+        TempDirectory.shim(), RequirementTracker.shim()
+    )
+)
+get_requirement_tracker.create_path(
+    "req.req_tracker.get_requirement_tracker", "7.0.0", "9999"
+)
 
 Resolver = ShimmedPathCollection("Resolver", ImportTypes.CLASS)
 Resolver.create_path("resolve.Resolver", "7.0.0", "19.1.1")

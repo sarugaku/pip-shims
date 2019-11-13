@@ -48,6 +48,7 @@ from pip_shims import (
     _strip_extras,
     cmdoptions,
     get_installed_distributions,
+    get_requirement_tracker,
     index_group,
     install_req_from_editable,
     install_req_from_line,
@@ -352,7 +353,7 @@ def test_resolution(tmpdir, PipCommand):
             )
         resolver = None
         preparer = None
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             # Pip 18 uses a requirement tracker to prevent fork bombs
             if req_tracker:
                 preparer_kwargs["req_tracker"] = req_tracker
@@ -486,7 +487,12 @@ def test_wheelbuilder(tmpdir, PipCommand):
     }
     if parse_version(pip_version) > parse_version("19.99.99"):
         kwargs.update(
-            {"session": session, "finder": finder,}
+            {
+                "session": session,
+                "finder": finder,
+                "require_hashes": False,
+                "use_user_site": False,
+            }
         )
     ireq = InstallRequirement.from_editable(
         "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
@@ -525,7 +531,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 {"use_user_site": False, "require_hashes": False,}
             )
         wheel_cache = kwargs.pop("wheel_cache")
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             if req_tracker:
                 kwargs["req_tracker"] = req_tracker
             preparer = RequirementPreparer(**kwargs)

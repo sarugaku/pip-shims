@@ -48,6 +48,7 @@ from pip_shims import (
     _strip_extras,
     cmdoptions,
     get_installed_distributions,
+    get_requirement_tracker,
     index_group,
     install_req_from_editable,
     install_req_from_line,
@@ -329,7 +330,12 @@ def test_resolution(tmpdir, PipCommand):
         }
         if parse_version(pip_version) > parse_version("19.99.99"):
             preparer_kwargs.update(
-                {"session": session, "finder": finder,}
+                {
+                    "session": session,
+                    "finder": finder,
+                    "require_hashes": False,
+                    "use_user_site": False,
+                }
             )
         else:
             resolver_kwargs["session"] = session
@@ -347,7 +353,7 @@ def test_resolution(tmpdir, PipCommand):
             )
         resolver = None
         preparer = None
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             # Pip 18 uses a requirement tracker to prevent fork bombs
             if req_tracker:
                 preparer_kwargs["req_tracker"] = req_tracker
@@ -358,10 +364,7 @@ def test_resolution(tmpdir, PipCommand):
             reqset.add_requirement(ireq)
             resolver = Resolver(**resolver_kwargs)
             resolver.require_hashes = False
-            resolve_one_kwargs = {}
-            if parse_version(pip_version) > parse_version("19.99.99"):
-                resolve_one_kwargs["require_hashes"] = resolver.require_hashes
-            results = resolver._resolve_one(reqset, ireq, **resolve_one_kwargs)
+            results = resolver._resolve_one(reqset, ireq)
             reqset.cleanup_files()
     results = set(results)
     result_names = [r.name for r in results]
@@ -484,7 +487,12 @@ def test_wheelbuilder(tmpdir, PipCommand):
     }
     if parse_version(pip_version) > parse_version("19.99.99"):
         kwargs.update(
-            {"session": session, "finder": finder,}
+            {
+                "session": session,
+                "finder": finder,
+                "require_hashes": False,
+                "use_user_site": False,
+            }
         )
     ireq = InstallRequirement.from_editable(
         "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
@@ -494,13 +502,19 @@ def test_wheelbuilder(tmpdir, PipCommand):
     # Ensure the remote artifact is downloaded locally. For wheels, it is
     # enough to just download because we'll use them directly. For an sdist,
     # we need to unpack so we can build it.
-    unpack_kwargs = {"session": session, "hashes": ireq.hashes(True)}
+    unpack_kwargs = {
+        "session": session,
+        "hashes": ireq.hashes(True),
+        "link": ireq.link,
+        "location": ireq.source_dir,
+        "download_dir": kwargs["download_dir"],
+    }
     if parse_version(pip_version) < parse_version("19.2.0"):
         unpack_kwargs["only_download"] = ireq.is_wheel
     if parse_version(pip_version) >= parse_version("10"):
-        unpack_kwargs["progress_bar"] = False
+        unpack_kwargs["progress_bar"] = "off"
     if not is_file_url(ireq.link):
-        unpack_url(ireq.link, ireq.source_dir, kwargs["download_dir"], **unpack_kwargs)
+        unpack_url(**unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
         kwargs["session"] = finder.session
@@ -511,7 +525,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
     else:
         kwargs.update({"progress_bar": "off", "build_isolation": False})
         wheel_cache = kwargs.pop("wheel_cache")
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             if req_tracker:
                 kwargs["req_tracker"] = req_tracker
             preparer = RequirementPreparer(**kwargs)

@@ -1,12 +1,20 @@
 # -*- coding=utf-8 -*-
+import contextlib
+import os
 import sys
 
 from packaging import specifiers
 
 from .environment import BASE_IMPORT_PATH, MYPY_RUNNING, get_pip_version
+from .utils import get_method_args
+
+try:
+    from pip._vendor.contextlib2 import ExitStack
+except ImportError:
+    ExitStack = None
 
 if MYPY_RUNNING:
-    from typing import Any, Callable, List, Optional, Tuple
+    from typing import Any, Callable, Iterator, List, Optional, Tuple
 
 
 class SearchScope(object):
@@ -156,3 +164,34 @@ class LinkEvaluator(object):
         self._ignore_compatibility = ignore_compatibility
 
         self.project_name = project_name
+
+
+@contextlib.contextmanager
+def temp_environ():
+    """Allow the ability to set os.environ temporarily"""
+    environ = dict(os.environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(environ)
+
+
+@contextlib.contextmanager
+def get_requirement_tracker(temp_directory_creator=None, req_tracker_creator=None):
+    # type: () -> Iterator[Any]
+    root = os.environ.get("PIP_REQ_TRACKER")
+    if not req_tracker_creator:
+        return None
+    req_tracker_init, req_tracker_args = get_method_args(req_tracker_creator.__init__)
+    if "root" not in req_tracker_args.args:
+        with req_tracker_creator() as tracker:
+            yield tracker
+    else:
+        with ExitStack() as ctx:
+            if root is None:
+                root = ctx.enter_context(temp_directory_creator(kind="req-tracker")).path
+                ctx.enter_context(temp_environ())
+                os.environ["PIP_REQ_TRACKER"] = root
+            with req_tracker_creator(root) as tracker:
+                yield tracker

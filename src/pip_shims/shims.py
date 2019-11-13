@@ -8,6 +8,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import six
+from packaging.version import parse as parse_version
 
 # format: off
 six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
@@ -23,8 +24,7 @@ class _shims(types.ModuleType):
 
     @classmethod
     def parse_version(cls, version):
-        pkging_version = importlib.import_module("pip._vendor.packaging.version")
-        return pkging_version.parse(version)
+        return parse_version(version)
 
     def __dir__(self):
         result = list(self._locations.keys()) + list(self.__dict__.keys())
@@ -109,12 +109,11 @@ class _shims(types.ModuleType):
         return list(self._locations.keys())
 
     def __init__(self):
-        # from .utils import _parse, get_package, STRING_TYPES
         from . import utils
 
         self.utils = utils
         self._parse = utils._parse
-        self.get_package = utils.get_package
+        self.split_package = utils.split_package
         self.STRING_TYPES = utils.STRING_TYPES
         self._modules = {
             "pip": importlib.import_module(self.BASE_IMPORT_PATH),
@@ -457,7 +456,9 @@ class _shims(types.ModuleType):
             module_paths = self._get_module_paths(new_method_name)
             target = next(
                 iter(
-                    sorted(set([tgt for mod, tgt in map(self.get_package, module_paths)]))
+                    sorted(
+                        set([tgt for mod, tgt in map(self.split_package, module_paths)])
+                    )
                 ),
                 None,
             )
@@ -511,7 +512,7 @@ class _shims(types.ModuleType):
         return the new location of the given import if it has been remapped.
         """
         module_paths = [
-            self.get_package(pth) for pth in self._get_module_paths(search_pth)
+            self.split_package(pth) for pth in self._get_module_paths(search_pth)
         ]
         moved_methods = [
             (base, target_cls) for base, target_cls in module_paths if target_cls in moves
@@ -596,7 +597,7 @@ class _shims(types.ModuleType):
     def get_package_from_modules(self, modules):
         modules = [
             (package_name, self.import_module(m))
-            for m, package_name in map(self.get_package, modules)
+            for m, package_name in map(self.split_package, modules)
         ]
         imports = []
         shim = None

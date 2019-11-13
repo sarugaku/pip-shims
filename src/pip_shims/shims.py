@@ -113,7 +113,7 @@ class _shims(types.ModuleType):
 
         self.utils = utils
         self._parse = utils._parse
-        self.split_package = utils.split_package
+        self.get_package = utils.get_package
         self.STRING_TYPES = utils.STRING_TYPES
         self._modules = {
             "pip": importlib.import_module(self.BASE_IMPORT_PATH),
@@ -456,9 +456,7 @@ class _shims(types.ModuleType):
             module_paths = self._get_module_paths(new_method_name)
             target = next(
                 iter(
-                    sorted(
-                        set([tgt for mod, tgt in map(self.split_package, module_paths)])
-                    )
+                    sorted(set([tgt for mod, tgt in map(self.get_package, module_paths)]))
                 ),
                 None,
             )
@@ -512,7 +510,7 @@ class _shims(types.ModuleType):
         return the new location of the given import if it has been remapped.
         """
         module_paths = [
-            self.split_package(pth) for pth in self._get_module_paths(search_pth)
+            self.get_package(pth) for pth in self._get_module_paths(search_pth)
         ]
         moved_methods = [
             (base, target_cls) for base, target_cls in module_paths if target_cls in moves
@@ -597,7 +595,7 @@ class _shims(types.ModuleType):
     def get_package_from_modules(self, modules):
         modules = [
             (package_name, self.import_module(m))
-            for m, package_name in map(self.split_package, modules)
+            for m, package_name in map(self.get_package, modules)
         ]
         imports = []
         shim = None

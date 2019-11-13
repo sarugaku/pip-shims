@@ -363,8 +363,7 @@ def test_resolution(tmpdir, PipCommand):
             reqset.add_requirement(ireq)
             resolver = Resolver(**resolver_kwargs)
             resolver.require_hashes = False
-            resolve_one_kwargs = {}
-            results = resolver._resolve_one(reqset, ireq, **resolve_one_kwargs)
+            results = resolver._resolve_one(reqset, ireq)
             reqset.cleanup_files()
     results = set(results)
     result_names = [r.name for r in results]
@@ -519,13 +518,12 @@ def test_wheelbuilder(tmpdir, PipCommand):
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:
         kwargs.update(
-            {
-                "progress_bar": "off",
-                "build_isolation": False,
-                "use_user_site": False,
-                "require_hashes": False,
-            }
+            {"progress_bar": "off", "build_isolation": False,}
         )
+        if parse_version(pip_version) > parse_version("19.99.99"):
+            kwargs.update(
+                {"use_user_site": False, "require_hashes": False,}
+            )
         wheel_cache = kwargs.pop("wheel_cache")
         with RequirementTracker() as req_tracker:
             if req_tracker:

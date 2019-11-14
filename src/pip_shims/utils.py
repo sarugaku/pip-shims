@@ -1,4 +1,5 @@
 # -*- coding=utf-8 -*-
+import contextlib
 import inspect
 import sys
 from functools import wraps
@@ -47,3 +48,11 @@ def get_method_args(target_method):
     else:
         target_func = target_method
     return target_func, inspected_args
+
+
+@contextlib.contextmanager
+def nullcontext(*args, **kwargs):
+    try:
+        yield
+    finally:
+        pass

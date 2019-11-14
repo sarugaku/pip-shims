@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import six
 from packaging.version import parse as parse_version
 
-from .utils import get_method_args
+from .utils import get_method_args, nullcontext
 
 # format: off
 six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
@@ -122,7 +122,7 @@ class _shims(types.ModuleType):
         root = os.environ.get("PIP_REQ_TRACKER")
         ReqTracker = getattr(self, "RequirementTracker", None)
         if ReqTracker is not None:
-            fn, fn_args = get_method_args(ReqTracker.__init__)
+            _, fn_args = get_method_args(ReqTracker.__init__)
             if "root" in fn_args.args:
                 if root is None:
                     TempDirectory = getattr(self, "TempDirectory", None)
@@ -222,7 +222,6 @@ class _shims(types.ModuleType):
             "InstallRequirement": ("req.req_install.InstallRequirement", "7.0.0", "9999"),
             "InstallationError": ("exceptions.InstallationError", "7.0.0", "9999"),
             "UninstallationError": ("exceptions.UninstallationError", "7.0.0", "9999"),
-            "DistributionNotFound": ("exceptions.DistributionNotFound", "7.0.0", "9999"),
             "RequirementsFileParseError": (
                 "exceptions.RequirementsFileParseError",
                 "7.0.0",
@@ -490,7 +489,7 @@ class _shims(types.ModuleType):
         :returns: A pair of dictionaries mapping the old-to-new and new-to-old import
             path, including target, name, location, and modules.
         """
-        original_base, original_target = moved_package
+        _, original_target = moved_package
         original_import = self._import(self._locations[original_target])
         old_to_new = {}
         new_to_old = {}
@@ -586,7 +585,7 @@ class _shims(types.ModuleType):
             else:
                 imported = self._import(locations[target])
                 if not imported and target in contextmanagers:
-                    return self.nullcontext
+                    return nullcontext
                 if inspect.isclass(imported) and target in class_updates:
                     imported = self._import_with_override(target, imported)
                 return imported
@@ -631,7 +630,7 @@ class _shims(types.ModuleType):
 
     def none_or_ctxmanager(self, pkg_name):
         if pkg_name in self._contextmanagers:
-            return self.nullcontext
+            return nullcontext
         return None
 
     def get_package_from_modules(self, modules):
@@ -665,13 +664,6 @@ class _shims(types.ModuleType):
 
     def do_import(self, *args, **kwargs):
         return self._import(*args, **kwargs)
-
-    @contextmanager
-    def nullcontext(self, *args, **kwargs):
-        try:
-            yield
-        finally:
-            pass
 
     def get_pathinfo(self, module_path):
         assert isinstance(module_path, (list, tuple))

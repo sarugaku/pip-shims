@@ -1,0 +1,6 @@
+Updated the paths for the following moved items:
+- ``SafeFileCache`` -> ``network.cache``
+- ``Link`` -> ``models.link.Link``
+- ``path_to_url`` -> ``utils.url``
+- ``url_to_path`` -> ``utils.url``
+- ``SourceDistribution`` -> ``distributions.source.legacy``

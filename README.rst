@@ -106,22 +106,30 @@ commands.freeze           DEV_PKGS
 exceptions                DistributionNotFound
 utils.hashes              FAVORITE_HASH
 models                    FormatControl                              index
+models.target_python      TargetPython
+models.selection_prefs    SelectionPreferences
+collector                 LinkCollector
+index                     LinkEvaluator
+index                     CandidatePreferences
 utils.misc                get_installed_distributions                utils
 utils.compat              stdlib_pkgs                                compat
 cli.cmdoptions            index_group                                cmdoptions
+cli.req_command           SessionCommandMixin
 req.req_install           InstallRequirement
 req.constructors          install_req_from_line                      req.req_install.InstallRequirement
 req.constructors          install_req_from_editable                  req.req_install.InstallRequirement
+req.constructors          install_req_from_req_string
 req.req_uninstall         UninstallPathSet
 distributions             make_distribution_for_install_requirement  operations.prepare.make_abstract_dist
 distributions.base        AbstractDistribution
 distributions.source      SourceDistribution
 distributions.installed   InstalledDistribution
 distributions.wheel       WheelDistribution
-download                  is_archive_file
-download                  is_file_url
+<shimmed>                 is_archive_file                            download
+<shimmed>                 is_file_url                                download
 utils.misc                is_installable_dir                         utils
-index                     Link
+models.link               Link                                       index
+models.search_scope       SearchScope
 operations.prepare        make_abstract_dist                         req.req_set
 cli.cmdoptions            make_option_group                          cmdoptions
 index                     CandidateEvaluator
@@ -144,8 +152,8 @@ operations.freeze         FrozenRequirement                          <`__init__`
 req.req_set               RequirementSet
 req.req_tracker           RequirementTracker
 resolve                   Resolver
-download                  SafeFileCache
-download                  url_to_path
+network.cache             SafeFileCache                              download
+utils.urls                url_to_path                                download
 download                  unpack_url
 locations                 USER_CACHE_DIR
 vcs.versioncontrol        VcsSupport                                 vcs.VcsSupport

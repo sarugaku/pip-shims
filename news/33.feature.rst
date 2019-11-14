@@ -1,0 +1,1 @@
+Added ``SessionCommandMixin``, ``CandidateEvaluator``, ``CandidatePreferences``, ``LinkCollector``, ``LinkEvaluator``, ``TargetPython``, ``SearchScope``, and ``SelectionPreferences`` to exposed classes and ``install_req_from_req_string`` to exposed functions.

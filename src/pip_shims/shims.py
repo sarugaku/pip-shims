@@ -20,9 +20,7 @@ from six.moves import Callable  # type: ignore  # noqa  # isort:skip
 
 
 class _shims(types.ModuleType):
-    CURRENT_PIP_VERSION = "19.3.1"
-    BASE_IMPORT_PATH = os.environ.get("PIP_SHIMS_BASE_MODULE", "pip")
-    path_info = namedtuple("PathInfo", "path start_version end_version")
+    CURRENT_PIP_VERSION = str(lookup_current_pip_version())
 
     @classmethod
     def parse_version(cls, version):

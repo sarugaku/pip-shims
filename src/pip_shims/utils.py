@@ -1,4 +1,5 @@
 # -*- coding=utf-8 -*-
+import contextlib
 import inspect
 import sys
 from functools import wraps
@@ -141,3 +142,11 @@ def set_default_kwargs(basecls, method, **default_kwargs):
 
 def fallback_is_file_url(link):
     return link.url.lower().startswith("file:")
+
+
+@contextlib.contextmanager
+def nullcontext(*args, **kwargs):
+    try:
+        yield
+    finally:
+        pass

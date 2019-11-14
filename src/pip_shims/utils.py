@@ -109,7 +109,8 @@ def overload_func_using_original(parent, func_name, new_func):
             original_val = getattr(original_func, property_name, None)
             if original_val:
                 setattr(new_func, property_name, original_val)
-        set_default_kwargs(new_func, "base_func", original_func)
+        new_func = set_default_kwargs(new_func, "base_func", original_func)
+    return new_func
 
 
 def set_default_kwargs(basecls, method, **default_kwargs):

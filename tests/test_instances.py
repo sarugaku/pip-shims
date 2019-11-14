@@ -515,7 +515,13 @@ def test_wheelbuilder(tmpdir, PipCommand):
         builder = WheelBuilder(reqset, finder)
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:
-        kwargs.update({"progress_bar": "off", "build_isolation": False})
+        kwargs.update(
+            {"progress_bar": "off", "build_isolation": False,}
+        )
+        if parse_version(pip_version) > parse_version("19.99.99"):
+            kwargs.update(
+                {"use_user_site": False, "require_hashes": False,}
+            )
         wheel_cache = kwargs.pop("wheel_cache")
         with get_requirement_tracker() as req_tracker:
             if req_tracker:

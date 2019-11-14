@@ -12,7 +12,7 @@ from contextlib import contextmanager
 import six
 from packaging.version import parse as parse_version
 
-from .models import ShimmedPathCollection, lookup_current_pip_version
+from .models import ShimmedPathCollection, import_pip, lookup_current_pip_version
 
 # format: off
 six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
@@ -55,6 +55,7 @@ class _shims(types.ModuleType):
     def __init__(self):
         self._locations = ShimmedPathCollection.get_registry()
         self.pip_version = str(lookup_current_pip_version())
+        self.pip = import_pip()
 
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")

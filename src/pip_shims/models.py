@@ -685,7 +685,7 @@ class ShimmedPathCollection(object):
     def shim(self):
         top_path = self._get_top_path()
         result = self.traverse(top_path)
-        if result == top_path.nullcontext and self._default is not None:
+        if result == nullcontext and self._default is not None:
             default_result = self.traverse(self._default)
             if default_result:
                 return default_result

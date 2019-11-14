@@ -1,4 +1,6 @@
 # -*- coding=utf-8 -*-
+from __future__ import absolute_import
+
 import contextlib
 import os
 import sys
@@ -182,16 +184,19 @@ def get_requirement_tracker(temp_directory_creator=None, req_tracker_creator=Non
     # type: () -> Iterator[Any]
     root = os.environ.get("PIP_REQ_TRACKER")
     if not req_tracker_creator:
-        return None
-    req_tracker_init, req_tracker_args = get_method_args(req_tracker_creator.__init__)
-    if "root" not in req_tracker_args.args:
-        with req_tracker_creator() as tracker:
-            yield tracker
+        yield None
     else:
-        with ExitStack() as ctx:
-            if root is None:
-                root = ctx.enter_context(temp_directory_creator(kind="req-tracker")).path
-                ctx.enter_context(temp_environ())
-                os.environ["PIP_REQ_TRACKER"] = root
-            with req_tracker_creator(root) as tracker:
+        _, req_tracker_args = get_method_args(req_tracker_creator.__init__)
+        if not req_tracker_args or "root" not in req_tracker_args.args:
+            with req_tracker_creator() as tracker:
                 yield tracker
+        else:
+            with ExitStack() as ctx:
+                if root is None:
+                    root = ctx.enter_context(
+                        temp_directory_creator(kind="req-tracker")
+                    ).path
+                    ctx.enter_context(temp_environ())
+                    os.environ["PIP_REQ_TRACKER"] = root
+                with req_tracker_creator(root) as tracker:
+                    yield tracker

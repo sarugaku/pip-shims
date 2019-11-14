@@ -576,7 +576,7 @@ class ShimmedPath:
         if prefix is None:
             current_pip = lookup_current_pip_version()
             prefix = current_pip.base_import_path
-        return self._import_module(".".join([prefix, self.module_path]))
+        return self._import_module(".".join([prefix, self.module_path]).rstrip("."))
 
     def __hash__(self):
         # type: () -> int
@@ -694,6 +694,10 @@ class ShimmedPathCollection(object):
             return result
         if self._default is not None:
             return self.traverse(self._default)
+
+
+def import_pip():
+    return importlib.import_module("pip")
 
 
 _strip_extras = ShimmedPathCollection("_strip_extras", ImportTypes.FUNCTION)

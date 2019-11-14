@@ -22,6 +22,7 @@ from .utils import (
     get_method_args,
     make_classmethod,
     make_method,
+    nullcontext,
     parse_version,
     set_default_kwargs,
     split_package,
@@ -547,7 +548,7 @@ class ShimmedPath:
         # type: (types.ModuleType, str) -> Callable
         result = self._shim_base(imported, attribute_name)
         if result is None:
-            result = self.nullcontext
+            result = nullcontext
         return result
 
     def shim(self):
@@ -579,13 +580,6 @@ class ShimmedPath:
     def __hash__(self):
         # type: () -> int
         return hash(self._as_tuple())
-
-    @contextlib.contextmanager
-    def nullcontext(self, *args, **kwargs):
-        try:
-            yield
-        finally:
-            pass
 
 
 class ShimmedPathCollection(object):

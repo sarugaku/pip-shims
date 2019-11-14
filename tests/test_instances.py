@@ -232,10 +232,7 @@ def test_resolution(tmpdir, PipCommand):
             link_collector = LinkCollector(session=session, search_scope=search_scope)
             finder_args = {"link_collector": link_collector}
         else:
-            finder_args = {
-                "search_scope": search_scope,
-                "session": session,
-            }
+            finder_args = {"search_scope": search_scope, "session": session}
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,
@@ -348,9 +345,7 @@ def test_resolution(tmpdir, PipCommand):
             )
             resolver_kwargs["make_install_req"] = make_install_req
         else:
-            resolver_kwargs.update(
-                {"isolated": False, "wheel_cache": wheel_cache,}
-            )
+            resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
         resolver = None
         preparer = None
         with get_requirement_tracker() as req_tracker:
@@ -444,10 +439,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
             link_collector = LinkCollector(session=session, search_scope=search_scope)
             finder_args = {"link_collector": link_collector}
         else:
-            finder_args = {
-                "search_scope": search_scope,
-                "session": session,
-            }
+            finder_args = {"search_scope": search_scope, "session": session}
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,

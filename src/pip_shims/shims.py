@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import sys
 import types
 
-import six
 from packaging.version import parse as parse_version
 
 from .models import (

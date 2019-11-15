@@ -14,7 +14,6 @@ import six
 from . import backports
 from .environment import BASE_IMPORT_PATH, MYPY_RUNNING, get_pip_version
 from .utils import (
-    BaseClassMethod,
     fallback_is_file_url,
     get_method_args,
     make_classmethod,

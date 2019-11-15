@@ -23,6 +23,7 @@ from pip_shims import (
     FormatControl,
     FrozenRequirement,
     InstallationError,
+    InstallCommand,
     InstallRequirement,
     Link,
     LinkCollector,
@@ -48,6 +49,7 @@ from pip_shims import (
     _strip_extras,
     cmdoptions,
     get_installed_distributions,
+    get_package_finder,
     get_requirement_tracker,
     index_group,
     install_req_from_editable,
@@ -533,6 +535,32 @@ def test_wheelbuilder(tmpdir, PipCommand):
             builder = WheelBuilder(*builder_args)
             output_file = builder._build_one(ireq, output_dir.strpath)
     assert output_file, output_file
+
+
+def test_get_packagefinder():
+    install_cmd = InstallCommand()
+    finder = get_package_finder(
+        install_cmd, python_versions=("27", "35", "36", "37", "38"), implementation="cp"
+    )
+    ireq = InstallRequirement.from_line("requests>=2.18")
+    if install_req_from_line:
+        ireq2 = install_req_from_line("requests>=2.18")
+        assert str(ireq) == str(ireq2)
+    requests_candidates = finder.find_all_candidates(ireq.name)
+    candidates = sorted(
+        [
+            c
+            for c in requests_candidates
+            if c.version
+            in ireq.specifier.filter(
+                (candidate.version for candidate in requests_candidates)
+            )
+        ],
+        key=lambda c: c.version,
+    )
+    best_version = candidates[-1]
+    location = getattr(best_version, "location", getattr(best_version, "link", None))
+    assert "pythonhosted" in location.url
 
 
 def test_pypi():

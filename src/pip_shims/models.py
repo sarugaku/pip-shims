@@ -2,23 +2,19 @@
 from __future__ import absolute_import
 
 import collections
-import contextlib
 import functools
 import importlib
 import inspect
 import operator
 import sys
-import types
 import weakref
 
-import packaging.version
 import six
 
 from . import backports
 from .environment import BASE_IMPORT_PATH, MYPY_RUNNING, get_pip_version
 from .utils import (
     BaseClassMethod,
-    BaseMethod,
     fallback_is_file_url,
     get_method_args,
     make_classmethod,
@@ -30,13 +26,15 @@ from .utils import (
 )
 
 # format: off
-six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
-from six.moves import Callable  # type: ignore  # isort:skip  # noqa
+six.add_move(six.MovedAttribute("Mapping", "collections", "collections.abc"))  # noqa
+from six.moves import Mapping  # type: ignore  # noqa  # isort:skip
 
 # format: on
 
 
 if MYPY_RUNNING:
+    import packaging.version
+    import types
     from typing import (  # noqa:F811
         Any,
         Callable,
@@ -308,34 +306,6 @@ class ShimmedPath:
         return (self.name, self.version_range, self.full_import_path, self.import_type)
 
     @staticmethod
-    def _set_default_kwargs(parent, basecls, method, **default_kwargs):
-        target_method = getattr(basecls, method, None)
-        if target_method is None:
-            return basecls
-        target_func, inspected_args = get_method_args(target_method)
-        pos_args = inspected_args.args
-        # Spit back the base class if we can't find matching arguments
-        # to put defaults in place of
-        if not any(arg in pos_args for arg in list(default_kwargs.keys())):
-            return basecls
-        prepended_defaults = tuple()
-        # iterate from the function's argument order to make sure we fill this
-        # out in the correct order
-        for arg in pos_args:
-            if arg in default_kwargs:
-                prepended_defaults = prepended_defaults + (default_kwargs[arg],)
-        if not prepended_defaults:
-            return basecls
-        if six.PY2 and inspect.ismethod(target_method):
-            new_defaults = prepended_defaults + target_func.__defaults__
-            target_method.__func__.__defaults__ = new_defaults
-        else:
-            new_defaults = prepended_defaults + target_method.__defaults__
-            target_method.__defaults__ = new_defaults
-        setattr(basecls, method, target_method)
-        return basecls
-
-    @staticmethod
     def _add_mixin(basecls, *mixins):
         if not any(mixins):
             return basecls
@@ -393,7 +363,8 @@ class ShimmedPath:
                 module_path, name = split_package(item_value)
                 module = cls._import_module(module_path)
                 item_value = getattr(module, name, None)
-            provides_map[item_name] = item_value
+            if item_value is not None:
+                provides_map[item_name] = item_value
         return provides_map
 
     def _ensure_function(self, parent, funcname, func):
@@ -427,8 +398,13 @@ class ShimmedPath:
 
     def _update_default_kwargs(self, parent, provided):
         for func_name, defaults in self.default_args.items():
-            default_args, default_kwargs = defaults
-            provided = set_default_kwargs(provided, func_name, **default_kwargs)
+            # * Note that we set default args here because we have the
+            # * option to use it, even though currently we dont
+            # * so we are forcibly ignoring the linter warning about it
+            default_args, default_kwargs = defaults  # noqa:W0612
+            provided = set_default_kwargs(
+                provided, func_name, *default_args, **default_kwargs
+            )
         return parent, provided
 
     def _ensure_functions(self, provided):
@@ -605,6 +581,7 @@ class ShimmedPathCollection(object):
         self.provided_contextmanagers = {}
         self.provided_classmethods = {}
         self.provided_mixins = []
+        self.pre_shim_functions = []
         self.register()
 
     def register(self):
@@ -685,15 +662,23 @@ class ShimmedPathCollection(object):
 
     def shim(self):
         top_path = self._get_top_path()
-        result = self.traverse(top_path)
+        if not self.pre_shim_functions:
+            result = self.traverse(top_path)
+        else:
+            for fn in self.pre_shim_functions:
+                result = fn(top_path)
+            result = self.traverse(result)
         if result == nullcontext and self._default is not None:
             default_result = self.traverse(self._default)
             if default_result:
                 return default_result
+        if result is None and self._default is not None:
+            result = self.traverse(self._default)
         if result is not None:
             return result
-        if self._default is not None:
-            return self.traverse(self._default)
+
+    def pre_shim(self, fn):
+        self.pre_shim_functions.append(fn)
 
 
 def import_pip():
@@ -707,6 +692,9 @@ _strip_extras.create_path("req.constructors._strip_extras", "18.1.0")
 cmdoptions = ShimmedPathCollection("cmdoptions", ImportTypes.MODULE)
 cmdoptions.create_path("cli.cmdoptions", "18.1", "9999")
 cmdoptions.create_path("cmdoptions", "7.0.0", "18.0")
+
+commands_dict = ShimmedPathCollection("commands_dict", ImportTypes.ATTRIBUTE)
+commands_dict.create_path("commands.commands_dict", "7.0.0", "9999")
 
 SessionCommandMixin = ShimmedPathCollection("SessionCommandMixin", ImportTypes.CLASS)
 SessionCommandMixin.create_path("cli.req_command.SessionCommandMixin", "19.3.0", "9999")
@@ -722,6 +710,9 @@ ConfigOptionParser.create_path("cli.parser.ConfigOptionParser", "18.1", "9999")
 ConfigOptionParser.create_path("baseparser.ConfigOptionParser", "7.0.0", "18.0")
 
 InstallCommand = ShimmedPathCollection("InstallCommand", ImportTypes.CLASS)
+InstallCommand.pre_shim(
+    functools.partial(backports.partial_command, cmd_mapping=commands_dict)
+)
 InstallCommand.create_path("commands.install.InstallCommand", "7.0.0", "9999")
 
 DistributionNotFound = ShimmedPathCollection("DistributionNotFound", ImportTypes.CLASS)
@@ -1004,3 +995,11 @@ stdlib_pkgs.create_path("compat.stdlib_pkgs", "7", "18.0")
 DEV_PKGS = ShimmedPathCollection("DEV_PKGS", ImportTypes.ATTRIBUTE)
 DEV_PKGS.create_path("commands.freeze.DEV_PKGS", "9.0.0", "9999")
 DEV_PKGS.set_default({"setuptools", "pip", "distribute", "wheel"})
+
+
+get_package_finder = ShimmedPathCollection("get_package_finder", ImportTypes.FUNCTION)
+get_package_finder.set_default(
+    functools.partial(
+        backports.get_package_finder, target_python_builder=TargetPython.shim()
+    )
+)

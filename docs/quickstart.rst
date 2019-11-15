@@ -106,6 +106,7 @@ cli                       cmdoptions                                 cmdoptions
 cli.base_command          Command                                    basecommand
 cli.parser                ConfigOptionParser                         baseparser
 commands.freeze           DEV_PKGS
+commands.install          InstallCommand
 exceptions                DistributionNotFound
 utils.hashes              FAVORITE_HASH
 models                    FormatControl                              index
@@ -152,8 +153,11 @@ exceptions                CommandError
 exceptions                PreviousBuildDirError
 operations.prepare        RequirementPreparer
 operations.freeze         FrozenRequirement                          <`__init__`>
+pep425tags                get_tags
+pep425tags                get_supported
 req.req_set               RequirementSet
 req.req_tracker           RequirementTracker
+req.req_tracker           get_requirement_tracker
 resolve                   Resolver
 network.cache             SafeFileCache                              download
 utils.urls                url_to_path                                download

@@ -1,24 +1,18 @@
 # -*- coding=utf-8 -*-
 from __future__ import absolute_import
 
-import importlib
-import inspect
-import os
 import sys
 import types
-from collections import namedtuple
-from contextlib import contextmanager
 
 import six
 from packaging.version import parse as parse_version
 
-from .models import ShimmedPathCollection, import_pip, lookup_current_pip_version
-
-# format: off
-six.add_move(six.MovedAttribute("Callable", "collections", "collections.abc"))  # noqa
-from six.moves import Callable  # type: ignore  # noqa  # isort:skip
-
-# format: on
+from .models import (
+    ShimmedPathCollection,
+    get_package_finder,
+    import_pip,
+    lookup_current_pip_version,
+)
 
 
 class _shims(types.ModuleType):
@@ -53,9 +47,10 @@ class _shims(types.ModuleType):
         return list(self._locations.keys())
 
     def __init__(self):
-        self._locations = ShimmedPathCollection.get_registry()
-        self.pip_version = str(lookup_current_pip_version())
         self.pip = import_pip()
+        self._locations = ShimmedPathCollection.get_registry()
+        self._locations["get_package_finder"] = get_package_finder
+        self.pip_version = str(lookup_current_pip_version())
 
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")

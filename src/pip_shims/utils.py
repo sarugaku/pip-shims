@@ -91,6 +91,7 @@ def split_package(module, subimport=None):
 
 
 def get_method_args(target_method):
+    inspected_args = None
     try:
         inspected_args = inspect.getargs(target_method.__code__)
     except AttributeError:
@@ -102,20 +103,7 @@ def get_method_args(target_method):
     return target_func, inspected_args
 
 
-def overload_func_using_original(parent, func_name, new_func):
-    original_func = getattr(parent, func_name, None)
-    if original_func is not None:
-        _, original_args = get_method_args(original_func)
-        _, new_args = get_method_args(new_func)
-        for property_name in ("__name__", "__qualname__", "__module__"):
-            original_val = getattr(original_func, property_name, None)
-            if original_val:
-                setattr(new_func, property_name, original_val)
-        new_func = set_default_kwargs(new_func, "base_func", original_func)
-    return new_func
-
-
-def set_default_kwargs(basecls, method, **default_kwargs):
+def set_default_kwargs(basecls, method, *args, **default_kwargs):
     target_method = getattr(basecls, method, None)
     if target_method is None:
         return basecls
@@ -128,6 +116,8 @@ def set_default_kwargs(basecls, method, **default_kwargs):
     prepended_defaults = tuple()
     # iterate from the function's argument order to make sure we fill this
     # out in the correct order
+    for arg in args:
+        prepended_defaults += (arg,)
     for arg in pos_args:
         if arg in default_kwargs:
             prepended_defaults = prepended_defaults + (default_kwargs[arg],)

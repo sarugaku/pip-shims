@@ -50,6 +50,7 @@ class _shims(types.ModuleType):
         self._locations = ShimmedPathCollection.get_registry()
         self._locations["get_package_finder"] = get_package_finder
         self.pip_version = str(lookup_current_pip_version())
+        self.parsed_pip_version = lookup_current_pip_version()
 
     def __getattr__(self, *args, **kwargs):
         locations = super(_shims, self).__getattribute__("_locations")

@@ -1,2 +1,0 @@
-Added override to the ``Command`` class to automatically fill in default values for ``name`` and ``summary`` which are now required in ``__init__``.
-- Added mixin to the Command class to continue supporting ``_build_session`` method.

@@ -1,3 +1,28 @@
+0.3.4 (2019-11-18)
+==================
+
+Features
+--------
+
+- Added ``SessionCommandMixin``, ``CandidateEvaluator``, ``CandidatePreferences``, ``LinkCollector``, ``LinkEvaluator``, ``TargetPython``, ``SearchScope``, and ``SelectionPreferences`` to exposed classes and ``install_req_from_req_string`` to exposed functions.  `#33 <https://github.com/sarugaku/pip-shims/issues/33>`_
+  
+
+Bug Fixes
+---------
+
+- Added override to the ``Command`` class to automatically fill in default values for ``name`` and ``summary`` which are now required in ``__init__``.
+  - Added mixin to the Command class to continue supporting ``_build_session`` method.  `#32 <https://github.com/sarugaku/pip-shims/issues/32>`_
+  
+- Shimmed functions for ``is_file_url`` and ``is_archive_file``.  `#34 <https://github.com/sarugaku/pip-shims/issues/34>`_
+  
+- Updated the paths for the following moved items:
+  - ``SafeFileCache`` -> ``network.cache``
+  - ``Link`` -> ``models.link.Link``
+  - ``path_to_url`` -> ``utils.url``
+  - ``url_to_path`` -> ``utils.url``
+  - ``SourceDistribution`` -> ``distributions.source.legacy``  `#35 <https://github.com/sarugaku/pip-shims/issues/35>`_
+
+
 0.3.3 (2019-06-16)
 ==================
 

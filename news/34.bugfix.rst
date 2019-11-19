@@ -1,1 +1,0 @@
-Shimmed functions for ``is_file_url`` and ``is_archive_file``.

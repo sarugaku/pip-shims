@@ -5,7 +5,7 @@ import sys
 
 from . import shims
 
-__version__ = "0.3.4.dev0"
+__version__ = "0.3.4"
 
 
 old_module = sys.modules["pip_shims"]

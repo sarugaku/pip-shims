@@ -1,3 +1,4 @@
+import datetime
 import pathlib
 import re
 import shutil
@@ -47,6 +48,18 @@ def _read_version():
     return version
 
 
+def _read_text_version():
+    lines = INIT_PY.read_text().splitlines()
+    match = next(iter(line for line in lines if line.startswith("__version__")), None)
+    if match is not None:
+        _, _, version_text = match.partition("=")
+        version_text = version_text.strip().strip('"').strip("'")
+        version = parver.Version.parse(version_text).normalize()
+        return version
+    else:
+        return _read_version()
+
+
 def _write_version(v):
     lines = []
     with INIT_PY.open() as f:
@@ -69,6 +82,11 @@ def _render_log():
         None,
         definitions,
     )
+    project_options = {
+        "name": config["package"],
+        "version": _read_text_version(),
+        "date": datetime.date.today().isoformat(),
+    }
     rendered = render_fragments(
         pathlib.Path(config["template"]).read_text(encoding="utf-8"),
         config["issue_format"],
@@ -76,6 +94,7 @@ def _render_log():
         definitions,
         config["underlines"][1:],
         False,  # Don't add newlines to wrapped text.
+        project_options,
     )
     return rendered
 

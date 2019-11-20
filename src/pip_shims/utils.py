@@ -5,7 +5,7 @@ import contextlib
 import copy
 import inspect
 import sys
-from functools import partial, wraps
+from functools import wraps
 
 import packaging.version
 import six
@@ -21,10 +21,9 @@ from six.moves import Callable  # type: ignore  # isort:skip  # noqa
 # format: on
 
 if MYPY_RUNNING:
-    import types
+    from types import ModuleType
     from typing import (
         Any,
-        ContextManager,
         Dict,
         Iterator,
         List,
@@ -171,7 +170,7 @@ def get_method_args(target_method):
 
 
 def set_default_kwargs(basecls, method, *args, **default_kwargs):
-    # type: (Union[Type, types.ModuleType], Callable, Any, Any) -> Union[Type, types.ModuleType]  # noqa
+    # type: (Union[Type, ModuleType], Callable, Any, Any) -> Union[Type, ModuleType]  # noqa
     target_method = getattr(basecls, method, None)
     if target_method is None:
         return basecls
@@ -205,7 +204,7 @@ def set_default_kwargs(basecls, method, *args, **default_kwargs):
 
 
 def ensure_function(parent, funcname, func):
-    # type: (Union[types.ModuleType, Type, Callable, Any], str, Callable) -> Callable
+    # type: (Union[ModuleType, Type, Callable, Any], str, Callable) -> Callable
     """Given a module, a function name, and a function object, attaches the given
     function to the module and ensures it is named properly according to the provided
     argument
@@ -306,11 +305,11 @@ def has_property(target, name):
 
 
 def apply_alias(imported, target, *aliases):
-    # type: (Union[types.ModuleType, Type, None], Any, Any) -> Any
+    # type: (Union[ModuleType, Type, None], Any, Any) -> Any
     """
     Given a target with attributes, point non-existant aliases at the first existing one
 
-    :param Union[types.ModuleType, Type] imported: A Module or Class base
+    :param Union[ModuleType, Type] imported: A Module or Class base
     :param Any target: The target which is a member of **imported** and will have aliases
     :param str aliases: A list of aliases, the first found attribute will be the basis
         for all non-existant names which will be created as pointers
@@ -380,7 +379,7 @@ def suppress_setattr(obj, attr, value, filter_none=False):
         pass
     try:
         setattr(obj, attr, value)
-    except Exception:
+    except Exception:  # noqa
         pass
 
 

@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 
 import collections
-import copy
 import functools
 import importlib
 import inspect
@@ -65,9 +64,6 @@ if MYPY_RUNNING:
         TypeVar,
         Union,
     )
-    from .utils import TShimmedPath, TShimmedPathCollection, TShim, TShimmedFunc
-
-    # TShim
 
 
 PIP_VERSION_SET = {

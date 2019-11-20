@@ -662,6 +662,7 @@ def make_preparer(
     finder=None,  # type: Optional[TFinder]
     options=None,  # type: Optional[Values]
     require_hashes=None,  # type: Optional[bool]
+    use_user_site=None,  # type: Optional[bool]
     req_tracker=None,  # type: Optional[Union[TReqTracker, TShimmedFunc]]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
@@ -695,7 +696,9 @@ def make_preparer(
     :param Optional[TFinder] finder: The package finder to use during resolution,
         defaults to None
     :param Optional[Values] options: Pip options to use if needed, defaults to None
-    :param bool require_hashes: Whether to require hashes for preparation
+    :param Optional[bool] require_hashes: Whether to require hashes for preparation
+    :param Optional[bool] use_user_site: Whether to use the user site directory for
+        preparing requirements
     :param Optional[Union[TReqTracker, TShimmedFunc]] req_tracker: The requirement
         tracker to use for building packages, defaults to None
     :param Optional[TCommandInstance] install_cmd: The install command used to create
@@ -736,6 +739,7 @@ def make_preparer(
         "progress_bar": progress_bar,
         "build_isolation": build_isolation,
         "require_hashes": require_hashes,
+        "use_user_site": use_user_site,
     }
     if install_cmd is None:
         assert install_cmd_provider is not None
@@ -1141,6 +1145,8 @@ def resolve(
             "options": options,
             "finder": finder,
             "session": session,
+            "use_user_site": use_user_site,
+            "require_hashes": require_hashes,
         }
         # with req_tracker_provider() as req_tracker:
         if isinstance(req_tracker_provider, (types.FunctionType, functools.partial)):
@@ -1152,6 +1158,8 @@ def resolve(
             "ignore_installed",
             "use_user_site",
             "isolated",
+            "use_user_site",
+            "require_hashes",
         ]
         resolver_args = {key: kwargs[key] for key in resolver_keys if key in kwargs}
         if resolver_provider is None:

@@ -1,7 +1,13 @@
-import ast
 import os
 
-from setuptools import find_packages, setup
+# fmt: off
+if os.environ.get("PIP_SHIMS_BASE_MODULE", None):
+    os.environ.pop("PIP_SHIMS_BASE_MODULE")
+
+# fmt: on
+
+from setuptools import find_packages, setup  # isort:skip
+
 
 ROOT = os.path.dirname(__file__)
 

@@ -15,8 +15,8 @@ from .environment import MYPY_RUNNING
 # format: off
 six.add_move(
     six.MovedAttribute("Callable", "collections", "collections.abc")
-)  # noqa  # type: ignore
-from six.moves import Callable  # type: ignore  # noqa  # isort:skip
+)  # type: ignore  # noqa
+from six.moves import Callable  # type: ignore  # isort:skip  # noqa
 
 # format: on
 
@@ -26,6 +26,7 @@ if MYPY_RUNNING:
         Any,
         ContextManager,
         Dict,
+        Iterator,
         List,
         Optional,
         Sequence,
@@ -170,17 +171,20 @@ def get_method_args(target_method):
 
 
 def set_default_kwargs(basecls, method, *args, **default_kwargs):
-    # type: (Union[Type, types.ModuleType], Callable, List[Any], Dict[str, Any]) -> Union[Type, types.ModuleType]  # noqa
+    # type: (Union[Type, types.ModuleType], Callable, Any, Any) -> Union[Type, types.ModuleType]  # noqa
     target_method = getattr(basecls, method, None)
     if target_method is None:
         return basecls
     target_func, inspected_args = get_method_args(target_method)
-    pos_args = inspected_args.args
+    if inspected_args is not None:
+        pos_args = inspected_args.args
+    else:
+        pos_args = []
     # Spit back the base class if we can't find matching arguments
     # to put defaults in place of
     if not any(arg in pos_args for arg in list(default_kwargs.keys())):
         return basecls
-    prepended_defaults = tuple()
+    prepended_defaults = tuple()  # type: Tuple[Any, ...]
     # iterate from the function's argument order to make sure we fill this
     # out in the correct order
     for arg in args:
@@ -202,13 +206,19 @@ def set_default_kwargs(basecls, method, *args, **default_kwargs):
 
 def ensure_function(parent, funcname, func):
     # type: (Union[types.ModuleType, Type, Callable, Any], str, Callable) -> Callable
-    """Given a module, a function name, and a function
-    object, attaches the given function to the module and
-    ensures it is named properly according to the provided argument
+    """Given a module, a function name, and a function object, attaches the given
+    function to the module and ensures it is named properly according to the provided
+    argument
+
+    :param Any parent: The parent to attack the function to
+    :param str funcname: The name to give the function
+    :param Callable func: The function to rename and attach to **parent**
+    :returns: The function with its name, qualname, etc set to mirror **parent**
+    :rtype: Callable
     """
     qualname = funcname
     if parent is None:
-        parent = __module__  # noqa:F821  # type: ignore
+        parent = __module__  # type: ignore  # noqa:F821
     parent_is_module = inspect.ismodule(parent)
     parent_is_class = inspect.isclass(parent)
     module = None
@@ -231,12 +241,20 @@ def ensure_function(parent, funcname, func):
     return func
 
 
-def add_mixin_to_class(basecls, *mixins):
-    # type: (Type, Sequence[Type]) -> Type
+def add_mixin_to_class(basecls, mixins):
+    # type: (Type, List[Type]) -> Type
+    """
+    Given a class, adds the provided mixin classes as base classes and gives a new class
+
+    :param Type basecls: An initial class to generate a new class from
+    :param List[Type] mixins: A list of mixins to add as base classes
+    :return: A new class with the provided mixins as base classes
+    :rtype: Type[basecls, *mixins]
+    """
     if not any(mixins):
         return basecls
     base_dict = basecls.__dict__.copy()
-    class_tuple = (basecls,)
+    class_tuple = (basecls,)  # type: Tuple[Type, ...]
     for mixin in mixins:
         if not mixin:
             continue
@@ -273,7 +291,7 @@ def resolve_possible_shim(target):
 
 @contextlib.contextmanager
 def nullcontext(*args, **kwargs):
-    # type: (Any, Any) -> ContextManager
+    # type: (Any, Any) -> Iterator
     try:
         yield
     finally:
@@ -289,6 +307,16 @@ def has_property(target, name):
 
 def apply_alias(imported, target, *aliases):
     # type: (Union[types.ModuleType, Type, None], Any, Any) -> Any
+    """
+    Given a target with attributes, point non-existant aliases at the first existing one
+
+    :param Union[types.ModuleType, Type] imported: A Module or Class base
+    :param Any target: The target which is a member of **imported** and will have aliases
+    :param str aliases: A list of aliases, the first found attribute will be the basis
+        for all non-existant names which will be created as pointers
+    :return: The original target
+    :rtype: Any
+    """
     base_value = None  # type: Optional[Any]
     applied_aliases = set()
     unapplied_aliases = set()

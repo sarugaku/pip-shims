@@ -8,6 +8,7 @@ import importlib
 import inspect
 import operator
 import sys
+import types
 import weakref
 
 import six
@@ -34,8 +35,12 @@ from .utils import (
 )
 
 # format: off
-six.add_move(six.MovedAttribute("Sequence", "collections", "collections.abc"))  # type: ignore  # noqa
-six.add_move(six.MovedAttribute("Mapping", "collections", "collections.abc"))  # type: ignore  # noqa
+six.add_move(
+    six.MovedAttribute("Sequence", "collections", "collections.abc")
+)  # type: ignore  # noqa
+six.add_move(
+    six.MovedAttribute("Mapping", "collections", "collections.abc")
+)  # type: ignore  # noqa
 from six.moves import Sequence, Mapping  # type: ignore  # noqa  # isort:skip
 
 # format: on
@@ -43,7 +48,6 @@ from six.moves import Sequence, Mapping  # type: ignore  # noqa  # isort:skip
 
 if MYPY_RUNNING:
     import packaging.version
-    import types
 
     Module = types.ModuleType
     from typing import (  # noqa:F811
@@ -337,7 +341,7 @@ class ShimmedPath(object):
         self.provided_contextmanagers = provided_contextmanagers
         self.provided_mixins = [m for m in provided_mixins if m is not None]
         self.default_args = default_args
-        self.aliases = []  # type: List[List[Any]]
+        self.aliases = []  # type: List[List[str]]
         self._shimmed = None  # type: Optional[Any]
 
     def _as_tuple(self):
@@ -345,7 +349,7 @@ class ShimmedPath(object):
         return (self.name, self.version_range, self.full_import_path, self.import_type)
 
     def alias(self, aliases):
-        # type: (List[Any]) -> "ShimmedPath"
+        # type: (List[str]) -> "ShimmedPath"
         self.aliases.append(aliases)
         return self
 
@@ -538,7 +542,7 @@ class ShimmedPath(object):
             assert isinstance(result, type)  # noqa
             result = self._ensure_methods(result)
             if self.provided_mixins:
-                result = add_mixin_to_class(result, *self.provided_mixins)
+                result = add_mixin_to_class(result, self.provided_mixins)
             self._imported = imported
             self._provided = result
             self.update_sys_modules(imported)
@@ -616,7 +620,8 @@ class ShimmedPath(object):
         # always to _imported and never save the unshimmed module
         if self._imported is not None:
             return self._imported
-        return self._import_module(self.calculated_module_path)
+        result = self._import_module(self.calculated_module_path)
+        return result
 
     def __hash__(self):
         # type: () -> int
@@ -641,7 +646,7 @@ class ShimmedPathCollection(object):
         self.provided_classmethods = {}  # type: Dict[str, Callable]
         self.provided_mixins = []  # type: List[Type]
         self.pre_shim_functions = []  # type: List[Callable]
-        self.aliases = []  # type: List[List[Any]]
+        self.aliases = []  # type: List[List[str]]
         if paths is not None:
             if isinstance(paths, six.string_types):
                 self.create_path(paths, version_start=lookup_current_pip_version())
@@ -679,22 +684,22 @@ class ShimmedPathCollection(object):
     def provide_function(self, name, fn):
         # type: (str, Union[Callable, ShimmedPath, ShimmedPathCollection]) -> None
         if isinstance(fn, (ShimmedPath, ShimmedPathCollection)):
-            fn = resolve_possible_shim(fn)
+            fn = resolve_possible_shim(fn)  # type: ignore
         self.provided_functions[name] = fn  # type: ignore
 
     def provide_method(self, name, fn):
-        # type: (str, Union[Callable, ShimmedPath, ShimmedPathCollection]) -> None
+        # type: (str, Union[Callable, ShimmedPath, ShimmedPathCollection, property]) -> None
         if isinstance(fn, (ShimmedPath, ShimmedPathCollection)):
-            fn = resolve_possible_shim(fn)
+            fn = resolve_possible_shim(fn)  # type: ignore
         self.provided_methods[name] = fn  # type: ignore
 
     def alias(self, aliases):
-        # type: (List[Any]) -> None
+        # type: (List[str]) -> None
         """
         Takes a list of methods, functions, attributes, etc and ensures they
         all exist on the object pointing at the same referent.
 
-        :param List[Any] aliases: Names to map to the same functionality if they do not
+        :param List[str] aliases: Names to map to the same functionality if they do not
             exist.
         :return: None
         :rtype: None
@@ -763,8 +768,7 @@ class ShimmedPathCollection(object):
                 return default_result
         if result is None and self._default is not None:
             result = self.traverse(self._default)
-        if result is not None:
-            return result
+        return result
 
     def pre_shim(self, fn):
         # type: (Callable) -> None
@@ -899,7 +903,7 @@ install_req_from_req_string.create_path(
 InstallRequirement = ShimmedPathCollection("InstallRequirement", ImportTypes.CLASS)
 InstallRequirement.provide_method("from_line", install_req_from_line)
 InstallRequirement.provide_method("from_editable", install_req_from_editable)
-InstallRequirement.alias("build_location", "ensure_build_location")
+InstallRequirement.alias(["build_location", "ensure_build_location"])
 
 InstallRequirement.create_path("req.req_install.InstallRequirement", "7.0.0", "9999")
 
@@ -1017,9 +1021,7 @@ get_requirement_tracker = ShimmedPathCollection(
     "get_requirement_tracker", ImportTypes.CONTEXTMANAGER
 )
 get_requirement_tracker.set_default(
-    functools.partial(
-        backports.get_requirement_tracker, TempDirectory.shim(), RequirementTracker.shim()
-    )
+    functools.partial(backports.get_requirement_tracker, RequirementTracker.shim())
 )
 get_requirement_tracker.create_path(
     "req.req_tracker.get_requirement_tracker", "7.0.0", "9999"
@@ -1097,7 +1099,9 @@ DEV_PKGS.set_default({"setuptools", "pip", "distribute", "wheel"})
 get_package_finder = ShimmedPathCollection("get_package_finder", ImportTypes.FUNCTION)
 get_package_finder.set_default(
     functools.partial(
-        backports.get_package_finder, target_python_builder=TargetPython.shim()
+        backports.get_package_finder,
+        install_cmd_provider=InstallCommand,
+        target_python_builder=TargetPython.shim(),
     )
 )
 
@@ -1106,6 +1110,7 @@ make_preparer = ShimmedPathCollection("make_preparer", ImportTypes.FUNCTION)
 make_preparer.set_default(
     functools.partial(
         backports.make_preparer,
+        install_cmd_provider=InstallCommand,
         preparer_fn=RequirementPreparer,
         req_tracker_fn=get_requirement_tracker,
     )
@@ -1116,6 +1121,7 @@ get_resolver = ShimmedPathCollection("get_resolver", ImportTypes.FUNCTION)
 get_resolver.set_default(
     functools.partial(
         backports.get_resolver,
+        install_cmd_provider=InstallCommand,
         resolver_fn=Resolver,
         install_req_provider=install_req_from_req_string,
         wheel_cache_provider=WheelCache,
@@ -1126,7 +1132,11 @@ get_resolver.set_default(
 
 get_requirement_set = ShimmedPathCollection("get_requirement_set", ImportTypes.FUNCTION)
 get_requirement_set.set_default(
-    functools.partial(backports.get_requirement_set, req_set_provider=RequirementSet)
+    functools.partial(
+        backports.get_requirement_set,
+        install_cmd_provider=InstallCommand,
+        req_set_provider=RequirementSet,
+    )
 )
 
 
@@ -1134,11 +1144,13 @@ resolve = ShimmedPathCollection("resolve", ImportTypes.FUNCTION)
 resolve.set_default(
     functools.partial(
         backports.resolve,
+        install_cmd_provider=InstallCommand,
         reqset_provider=get_requirement_set,
         finder_provider=get_package_finder,
         resolver_provider=get_resolver,
         wheel_cache_provider=WheelCache,
         format_control_provider=FormatControl,
         make_preparer_provider=make_preparer,
+        req_tracker_provider=get_requirement_tracker,
     )
 )

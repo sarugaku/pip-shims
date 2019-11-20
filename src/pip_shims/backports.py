@@ -1,15 +1,17 @@
 # -*- coding=utf-8 -*-
 from __future__ import absolute_import
 
+import atexit
 import contextlib
 import functools
 import inspect
 import os
 import sys
+import types
 
 import six
 from packaging import specifiers
-from vistir.path import create_tracked_tempdir
+from vistir.compat import TemporaryDirectory
 
 from .environment import MYPY_RUNNING
 from .utils import (
@@ -33,6 +35,7 @@ if MYPY_RUNNING:
         Callable,
         Dict,
         Generator,
+        Generic,
         Iterator,
         List,
         Optional,
@@ -42,18 +45,15 @@ if MYPY_RUNNING:
         TypeVar,
         Union,
     )
+    from .utils import TShimmedPath, TShimmedPathCollection, TShim, TShimmedFunc
 
     TFinder = TypeVar("TFinder")
     TResolver = TypeVar("TResolver")
     TReqTracker = TypeVar("TReqTracker")
     TLink = TypeVar("TLink")
     TSession = TypeVar("TSession", bound=Session)
-    TShimmedPath = TypeVar("TShimmedPath")
-    TShimmedPathCollection = TypeVar("TShimmedPathCollection")
-    TShim = Union[TShimmedPath, TShimmedPathCollection]
-    TShimmedFunc = Union[TShimmedPath, TShimmedPathCollection, Callable, Type]
-    TCommand = TypeVar("TCommand")
-    TCommandInstance = TypeVar("TCommandInstance", bound=TCommand)
+    TCommand = TypeVar("TCommand", covariant=True)
+    TCommandInstance = TypeVar("TCommandInstance")
     TCmdDict = Dict[str, Union[Tuple[str, str, str], TCommandInstance]]
     TInstallRequirement = TypeVar("TInstallRequirement")
     TShimmedCmdDict = Union[TShim, TCmdDict]
@@ -90,7 +90,7 @@ class SelectionPreferences(object):
 
 
 class TargetPython(object):
-    fallback_get_tags = None  # type: Optional[Callable]
+    fallback_get_tags = None  # type: Optional[TShimmedFunc]
 
     def __init__(
         self,
@@ -116,8 +116,8 @@ class TargetPython(object):
         self._valid_tags = None
 
     def get_tags(self):
-        if self._valid_tags is None and self._fallback_get_tags:
-            fallback_func = resolve_possible_shim(self._fallback_get_tags)
+        if self._valid_tags is None and self.fallback_get_tags:
+            fallback_func = resolve_possible_shim(self.fallback_get_tags)
             versions = None
             if self._given_py_version_info:
                 versions = ["".join(map(str, self._given_py_version_info[:2]))]
@@ -211,7 +211,9 @@ def resolve_possible_shim(target):
     # type: (TShimmedFunc) -> Optional[Union[Type, Callable]]
     if target is None:
         return target
-    if getattr(target, "shim", None):
+    if getattr(target, "shim", None) and isinstance(
+        target.shim, (types.MethodType, types.FunctionType)
+    ):
         return target.shim()
     return target
 
@@ -228,30 +230,28 @@ def temp_environ():
 
 
 @contextlib.contextmanager
-def get_requirement_tracker(temp_directory_creator=None, req_tracker_creator=None):
-    # type: (Callable, Callable) -> Generator[TReqTracker, None, None]
+def get_requirement_tracker(req_tracker_creator=None):
+    # type: (Optional[Callable]) -> Generator[Optional[TReqTracker], None, None]
     root = os.environ.get("PIP_REQ_TRACKER")
     if not req_tracker_creator:
         yield None
     else:
-        _, req_tracker_args = get_method_args(req_tracker_creator.__init__)
-        if not req_tracker_args or "root" not in req_tracker_args.args:
-            with req_tracker_creator() as tracker:
+        req_tracker_args = []
+        _, required_args = get_method_args(req_tracker_creator.__init__)  # type: ignore
+        with ExitStack() as ctx:
+            if root is None:
+                root = ctx.enter_context(TemporaryDirectory(prefix="req-tracker")).name
+                ctx.enter_context(temp_environ())
+                os.environ["PIP_REQ_TRACKER"] = root
+            if required_args is not None and "root" in required_args:
+                req_tracker_args.append(root)
+            with req_tracker_creator(*req_tracker_args) as tracker:
                 yield tracker
-        else:
-            with ExitStack() as ctx:
-                if root is None:
-                    root = ctx.enter_context(
-                        temp_directory_creator(kind="req-tracker")
-                    ).path
-                    ctx.enter_context(temp_environ())
-                    os.environ["PIP_REQ_TRACKER"] = root
-                with req_tracker_creator(root) as tracker:
-                    yield tracker
 
 
+@contextlib.contextmanager
 def ensure_resolution_dirs(**kwargs):
-    # type: (Any) -> Dict[str, Any]
+    # type: (Any) -> Iterator[Dict[str, Any]]
     """
     Ensures that the proper directories are scaffolded and present in the provided kwargs
     for performing dependency resolution via pip.
@@ -262,15 +262,16 @@ def ensure_resolution_dirs(**kwargs):
     """
     keys = ("build_dir", "src_dir", "download_dir", "wheel_download_dir")
     if not any(kwargs.get(key) is None for key in keys):
-        return kwargs
-    base_dir = create_tracked_tempdir(prefix="pip-shims-")
-    for key in keys:
-        if kwargs.get(key) is not None:
-            continue
-        target = os.path.join(base_dir, key)
-        os.makedirs(target)
-        kwargs[key] = target
-    return kwargs
+        yield kwargs
+    else:
+        with TemporaryDirectory(prefix="pip-shims-") as base_dir:
+            for key in keys:
+                if kwargs.get(key) is not None:
+                    continue
+                target = os.path.join(base_dir.name, key)
+                os.makedirs(target)
+                kwargs[key] = target
+            yield kwargs
 
 
 def partial_command(shimmed_path, cmd_mapping=None):
@@ -289,14 +290,16 @@ def partial_command(shimmed_path, cmd_mapping=None):
     :rtype: Dict[str, str]
     """
     basecls = shimmed_path.shim()
+    resolved_cmd_mapping = None  # type: Optional[Dict[str, Any]]
     cmd_mapping = resolve_possible_shim(cmd_mapping)
-    if cmd_mapping is not None:
+    if cmd_mapping is not None and isinstance(cmd_mapping, dict):
         resolved_cmd_mapping = cmd_mapping.copy()
-    base_args = []
+    base_args = []  # type: List[str]
     for root_cls in basecls.mro():
         if root_cls.__name__ == "Command":
             _, root_init_args = get_method_args(root_cls.__init__)
-            base_args = root_init_args.args
+            if root_init_args is not None:
+                base_args = root_init_args.args
     needs_name_and_summary = any(arg in base_args for arg in ("name", "summary"))
     if not needs_name_and_summary:
         basecls.name = shimmed_path.name
@@ -311,6 +314,7 @@ def partial_command(shimmed_path, cmd_mapping=None):
         )
         basecls.__init__ = new_init
     result = basecls
+    assert resolved_cmd_mapping is not None
     for command_name, command_info in resolved_cmd_mapping.items():
         if getattr(command_info, "class_name", None) == shimmed_path.name:
             summary = getattr(command_info, "summary", "Command summary")
@@ -319,8 +323,28 @@ def partial_command(shimmed_path, cmd_mapping=None):
     return result
 
 
+def get_session(
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
+    install_cmd=None,  # type: TCommandInstance
+    options=None,  # type: Optional[Values]
+):
+    # type: (...) -> TSession
+    session = None  # type: Optional[TSession]
+    if install_cmd is None:
+        assert install_cmd_provider is not None
+        install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_cmd = install_cmd_provider()
+    if options is None:
+        options = install_cmd.parser.parse_args([])  # type: ignore
+    session = install_cmd._build_session(options)  # type: ignore
+    assert session is not None
+    atexit.register(session.close)
+    return session
+
+
 def populate_options(
-    install_command=None,  # type: TCommand
+    install_command=None,  # type: TCommandInstance
     options=None,  # type: Optional[Values]
     **kwargs  # type: Any
 ):
@@ -328,8 +352,8 @@ def populate_options(
     results = {}
     if install_command is None and options is None:
         raise TypeError("Must pass either options or InstallCommand to populate options")
-    if options is None:
-        options, _ = install_command.parser.parse_args([])
+    if options is None and install_command is not None:
+        options, _ = install_command.parser.parse_args([])  # type: ignore
     options_dict = options.__dict__
     for provided_key, provided_value in kwargs.items():
         if provided_key == "isolated":
@@ -349,7 +373,7 @@ def populate_options(
 
 
 def get_requirement_set(
-    install_command,  # type: TCommand
+    install_command=None,  # type: Optional[TCommandInstance]
     req_set_provider=None,  # type: Optional[TShimmedFunc]
     build_dir=None,  # type: Optional[str]
     src_dir=None,  # type: Optional[str]
@@ -368,6 +392,7 @@ def get_requirement_set(
     require_hashes=None,  # type: bool
     cache_dir=None,  # type: Optional[str]
     options=None,  # type: Optional[Values]
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
 ):
     # (...) -> TRequirementSet
     """
@@ -377,6 +402,10 @@ def get_requirement_set(
     invalid parameters will be ignored if they are not needed to generate a
     requirement set on the current pip version.
 
+    :param install_command: A :class:`~pip._internal.commands.install.InstallCommand`
+        instance which is used to generate the finder.
+    :param :class:`~pip_shims.models.ShimmedPathCollection` req_set_provider: A provider
+        to build requirement set instances.
     :param str build_dir: The directory to build requirements in. Removed in pip 10,
         defeaults to None
     :param str source_dir: The directory to use for source requirements. Removed in
@@ -406,12 +435,20 @@ def get_requirement_set(
     :param bool ignore_requires_python: Removed in pip 10, defaults to False.
     :param bool require_hashes: Whether to require hashes when resolving. Defaults to
         False.
-    options
+    :param Values options: An :class:`~optparse.Values` instance from an install cmd
+    :param install_cmd_provider: A shim for providing new install command instances.
+    :type install_cmd_provider: :class:`~pip_shims.models.ShimmedPathCollection`
     :return: A new requirement set instance
     :rtype: :class:`~pip._internal.req.req_set.RequirementSet`
     """
     req_set_provider = resolve_possible_shim(req_set_provider)
-    required_args = inspect.getargs(req_set_provider.__init__.__code__).args
+    if install_command is None:
+        install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_command = install_cmd_provider()
+    required_args = inspect.getargs(
+        req_set_provider.__init__.__code__
+    ).args  # type: ignore
     results, options = populate_options(
         install_command,
         options,
@@ -430,7 +467,7 @@ def get_requirement_set(
         cache_dir=cache_dir,
     )
     if session is None and "session" in required_args:
-        session = install_command._build_session(options)
+        session = get_session(install_cmd=install_command, options=options)
     results["wheel_cache"] = wheel_cache
     results["session"] = session
     results["wheel_download_dir"] = wheel_download_dir
@@ -438,7 +475,7 @@ def get_requirement_set(
 
 
 def get_package_finder(
-    install_cmd,  # type: TCommand
+    install_cmd=None,  # type: Optional[TCommand]
     options=None,  # type: Optional[Values]
     session=None,  # type: Optional[TSession]
     platform=None,  # type: Optional[str]
@@ -448,6 +485,7 @@ def get_package_finder(
     target_python=None,  # type: Optional[Any]
     ignore_requires_python=None,  # type: Optional[bool]
     target_python_builder=None,  # type: Optional[TShimmedFunc]
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
 ):
     # type: (...) -> TFinder
     """Shim for compatibility to generate package finders.
@@ -456,6 +494,8 @@ def get_package_finder(
     instance using the :class:`~pip._internal.commands.install.InstallCommand` helper
     method to construct the finder, shimmed with backports as needed for compatibility.
 
+    :param install_cmd_provider: A shim for providing new install command instances.
+    :type install_cmd_provider: :class:`~pip_shims.models.ShimmedPathCollection`
     :param install_cmd: A :class:`~pip._internal.commands.install.InstallCommand`
         instance which is used to generate the finder.
     :param optparse.Values options: An optional :class:`optparse.Values` instance
@@ -494,11 +534,17 @@ def get_package_finder(
     a590f48c010551dc6c4b31 (from https://pypi.org/simple/requests/) (requires-python:>=2.
     7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*)>)>
     """
+    if install_cmd is None:
+        install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_cmd = install_cmd_provider()
     if options is None:
-        options, _ = install_cmd.parser.parse_args([])
+        options, _ = install_cmd.parser.parse_args([])  # type: ignore
     if session is None:
-        session = install_cmd._build_session(options)
-    builder_args = inspect.getargs(install_cmd._build_package_finder.__code__)
+        session = get_session(install_cmd=install_cmd, options=options)  # type: ignore
+    builder_args = inspect.getargs(
+        install_cmd._build_package_finder.__code__
+    )  # type: ignore
     build_kwargs = {"options": options, "session": session}
     expects_targetpython = "target_python" in builder_args.args
     received_python = any(arg for arg in [platform, python_versions, abi, implementation])
@@ -540,11 +586,11 @@ def get_package_finder(
         and "ignore_requires_python" in builder_args.args
     ):
         build_kwargs["ignore_requires_python"] = ignore_requires_python
-    return install_cmd._build_package_finder(**build_kwargs)
+    return install_cmd._build_package_finder(**build_kwargs)  # type: ignore
 
 
 def shim_unpack(
-    unpack_fn,  # type: Callable
+    unpack_fn,  # type: TShimmedFunc
     download_dir,  # type str
     ireq=None,  # type: Optional[Any]
     link=None,  # type: Optional[Any]
@@ -552,7 +598,7 @@ def shim_unpack(
     hashes=None,  # type: Optional[Any]
     progress_bar="off",  # type: str
     only_download=None,  # type: Optional[bool]
-    session=None,  # type: Optional[Any],
+    session=None,  # type: Optional[Any]
 ):
     # (...) -> None
     """
@@ -580,7 +626,7 @@ def shim_unpack(
     :rtype: None
     """
     unpack_fn = resolve_possible_shim(unpack_fn)
-    required_args = inspect.getargs(unpack_fn.__code__).args
+    required_args = inspect.getargs(unpack_fn.__code__).args  # type: ignore
     unpack_kwargs = {"download_dir": download_dir}
     if ireq:
         if not link and ireq.link:
@@ -600,7 +646,7 @@ def shim_unpack(
         unpack_kwargs["only_download"] = only_download
     if session is not None and "session" in required_args:
         unpack_kwargs["session"] = session
-    return unpack_fn(**unpack_kwargs)
+    return unpack_fn(**unpack_kwargs)  # type: ignore
 
 
 @contextlib.contextmanager
@@ -617,6 +663,7 @@ def make_preparer(
     finder=None,  # type: Optional[TFinder]
     options=None,  # type: Optional[Values]
     req_tracker=None,  # type: Optional[Union[TReqTracker, TShimmedFunc]]
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
 ):
     # (...) -> ContextManager
@@ -673,7 +720,7 @@ def make_preparer(
     <pip._internal.operations.prepare.RequirementPreparer object at 0x7f8a2734be80>
     """
     preparer_fn = resolve_possible_shim(preparer_fn)
-    required_args = inspect.getargs(preparer_fn.__init__.__code__).args
+    required_args = inspect.getargs(preparer_fn.__init__.__code__).args  # type: ignore
     if not req_tracker and not req_tracker_fn and "req_tracker" in required_args:
         raise TypeError("No requirement tracker and no req tracker generator found!")
     req_tracker_fn = resolve_possible_shim(req_tracker_fn)
@@ -688,6 +735,11 @@ def make_preparer(
         "progress_bar": progress_bar,
         "build_isolation": build_isolation,
     }
+    if install_cmd is None:
+        assert install_cmd_provider is not None
+        install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_cmd = install_cmd_provider()
     preparer_args, options = populate_options(install_cmd, options, **options_map)
     if options is not None and pip_options_created:
         for k, v in options_map.items():
@@ -698,7 +750,7 @@ def make_preparer(
             "created without an InstallCommand."
         )
     elif all([session is None, session_is_required]):
-        session = install_cmd._build_session(options)
+        session = get_session(install_cmd=install_cmd, options=options)
     if all([finder is None, install_cmd is None, finder_is_required]):
         raise TypeError(
             "RequirementPreparer requires a packagefinder but no InstallCommand"
@@ -735,6 +787,7 @@ def get_resolver(
     session=None,  # type: Optional[TSession]
     options=None,  # type: Optional[Values]
     make_install_req=None,  # type: Optional[Callable]
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
 ):
     # (...) -> TResolver
@@ -833,11 +886,15 @@ def get_resolver(
     install_req_provider = resolve_possible_shim(install_req_provider)
     format_control_provider = resolve_possible_shim(format_control_provider)
     wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
-    required_args = inspect.getargs(resolver_fn.__init__.__code__).args
+    install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+    required_args = inspect.getargs(resolver_fn.__init__.__code__).args  # type: ignore
     install_cmd_dependency_map = {"session": session, "finder": finder}
-    resolver_kwargs = {}
+    resolver_kwargs = {}  # type: Dict[str, Any]
+    if install_cmd is None:
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_cmd = install_cmd_provider()
     if options is None and install_cmd is not None:
-        options = install_cmd.parser.parse_args([])
+        options = install_cmd.parser.parse_args([])  # type: ignore
     for arg, val in install_cmd_dependency_map.items():
         if arg not in required_args:
             continue
@@ -846,35 +903,32 @@ def get_resolver(
                 "Preparer requires a {0} but did not receive one "
                 "and cannot generate one".format(arg)
             )
-        elif arg == "session" and val is None and install_cmd:
-            val = install_cmd._build_session(options)
-        elif arg == "finder" and val is None and install_cmd:
+        elif arg == "session" and val is None:
+            val = get_session(install_cmd=install_cmd, options=options)
+        elif arg == "finder" and val is None:
             val = get_package_finder(install_cmd, options=options, session=session)
         resolver_kwargs[arg] = val
-    if all(
-        [
-            "make_install_req" in required_args,
-            make_install_req is None,
-            install_req_provider is None,
-        ]
-    ):
-        raise ValueError(
-            "Cannot generate resolver without make_install_req as a provider"
-        )
-    elif "make_install_req" in required_args:
-        if make_install_req is None:
+    if "make_install_req" in required_args:
+        if make_install_req is None and install_req_provider is not None:
             make_install_req = functools.partial(
                 install_req_provider,
                 isolated=isolated,
                 wheel_cache=wheel_cache,
                 # use_pep517=use_pep517,
             )
+        assert make_install_req is not None
         resolver_kwargs["make_install_req"] = make_install_req
     if "isolated" in required_args:
         resolver_kwargs["isolated"] = isolated
     if "wheel_cache" in required_args:
-        if wheel_cache is None:
-            wheel_cache = wheel_cache_provider(options.cache_dir, options.format_control)
+        if wheel_cache is None and wheel_cache_provider is not None:
+            cache_dir = getattr(options, "cache_dir", None)
+            format_control = getattr(
+                options,
+                "format_control",
+                format_control_provider(None, None),  # type: ignore
+            )
+            wheel_cache = wheel_cache_provider(cache_dir, format_control)
         resolver_kwargs["wheel_cache"] = wheel_cache
     resolver_kwargs.update(
         {
@@ -887,13 +941,15 @@ def get_resolver(
             "preparer": preparer,
         }
     )
-    return resolver_fn(**resolver_kwargs)
+    return resolver_fn(**resolver_kwargs)  # type: ignore
 
 
 def resolve(
     ireq,  # type: TInstallRequirement
-    install_command,  # type: TCommand
-    reqset_provider,  # type: TShimmedFunc,
+    reqset_provider=None,  # type: Optional[TShimmedFunc]
+    req_tracker_provider=None,  # type: Optional[TShimmedFunc]
+    install_cmd_provider=None,  # type: Optional[TShimmedFunc]
+    install_command=None,  # type: Optional[TCommand]
     finder_provider=None,  # type: Optional[TShimmedFunc]
     resolver_provider=None,  # type: Optional[TShimmedFunc]
     wheel_cache_provider=None,  # type: Optional[TShimmedFunc]
@@ -919,12 +975,106 @@ def resolve(
     require_hashes=None,  # type: bool
 ):
     # (...) -> Set[TInstallRequirement]
+    """
+    Resolves the provided **InstallRequirement**, returning a dictionary.
+
+    Maps a dictionary of names to corresponding ``InstallRequirement`` values.
+
+    :param :class:`~pip._internal.req.req_install.InstallRequirement` ireq: An
+        InstallRequirement to initiate the resolution process
+    :param :class:`~pip_shims.models.ShimmedPathCollection` reqset_provider: A provider
+        to build requirement set instances.
+    :param :class:`~pip_shims.models.ShimmedPathCollection` req_tracker_provider: A
+        provider to build requirement tracker instances
+    :param install_cmd_provider: A shim for providing new install command instances.
+    :type install_cmd_provider: :class:`~pip_shims.models.ShimmedPathCollection`
+    :param Optional[TCommandInstance] install_command:  The install command used to
+        create the finder, session, and options if needed, defaults to None.
+    :param :class:`~pip_shims.models.ShimmedPathCollection` finder_provider: A provider
+        to package finder instances.
+    :param :class:`~pip_shims.models.ShimmedPathCollection` resolver_provider: A provider
+        to build resolver instances
+    :param TShimmedFunc wheel_cache_provider: The provider function to use to generate a
+        wheel cache if needed.
+    :param TShimmedFunc format_control_provider: The provider function to use to generate
+        a format_control instance if needed.
+    :param TShimmedFunc make_preparer_provider: Callable or shim for generating preparers.
+    :param Optional[Values] options: Pip options to use if needed, defaults to None
+    :param Optional[TSession] session: Existing session to use for getting requirements,
+        defaults to None
+    :param :class:`~pip._internal.legacy_resolve.Resolver` resolver: A pre-existing
+        resolver instance to use for resolution
+    :param Optional[TFinder] finder: The package finder to use during resolution,
+        defaults to None.
+    :param str upgrade_strategy: Upgrade strategy to use, defaults to ``only-if-needed``.
+    :param Optional[bool] force_reinstall: Whether to simulate or assume package
+        reinstallation during resolution, defaults to None
+    :param Optional[bool] ignore_dependencies: Whether to ignore package dependencies,
+        defaults to None
+    :param Optional[bool] ignore_requires_python: Whether to ignore indicated
+        required_python versions on packages, defaults to None
+    :param bool ignore_installed: Whether to ignore installed packages during
+        resolution, defaults to True
+    :param bool use_user_site: Whether to use the user site location during resolution,
+        defaults to False
+    :param Optional[bool] isolated: Whether to isolate the resolution process, defaults
+        to None
+    :param Optional[str] build_dir: Directory for building packages and wheels, defaults
+        to None
+    :param str source_dir: The directory to use for source requirements. Removed in pip
+        10, defaults to None
+    :param Optional[str] download_dir: Target directory to download files, defaults to
+        None
+    :param str cache_dir: The cache directory to use for caching artifacts during
+        resolution
+    :param Optional[str] wheel_download_dir: Target directoryto download wheels, defaults
+        to None
+    :param Optional[TWheelCache] wheel_cache: The wheel cache to use, defaults to None
+    :param bool require_hashes: Whether to require hashes when resolving. Defaults to
+        False.
+    :return: A dictionary mapping requirements to corresponding
+        :class:`~pip._internal.req.req_install.InstallRequirement`s
+    :rtype: :class:`~pip._internal.req.req_install.InstallRequirement`
+
+    :Example:
+
+    >>> from pip_shims.shims import resolve, InstallRequirement
+    >>> ireq = InstallRequirement.from_line("requests>=2.20")
+    >>> results = resolve(ireq)
+    >>> for k, v in results.items():
+    ...    print("{0}: {1!r}".format(k, v))
+    requests: <InstallRequirement object: requests>=2.20 from https://files.pythonhosted.
+    org/packages/51/bd/23c926cd341ea6b7dd0b2a00aba99ae0f828be89d72b2190f27c11d4b7fb/reque
+    sts-2.22.0-py2.py3-none-any.whl#sha256=9cf5292fcd0f598c671cfc1e0d7d1a7f13bb8085e9a590
+    f48c010551dc6c4b31 editable=False>
+    idna: <InstallRequirement object: idna<2.9,>=2.5 from https://files.pythonhosted.org/
+    packages/14/2c/cd551d81dbe15200be1cf41cd03869a46fe7226e7450af7a6545bfc474c9/idna-2.8-
+    py2.py3-none-any.whl#sha256=ea8b7f6188e6fa117537c3df7da9fc686d485087abf6ac197f9c46432
+    f7e4a3c (from requests>=2.20) editable=False>
+    urllib3: <InstallRequirement object: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 from htt
+    ps://files.pythonhosted.org/packages/b4/40/a9837291310ee1ccc242ceb6ebfd9eb21539649f19
+    3a7c8c86ba15b98539/urllib3-1.25.7-py2.py3-none-any.whl#sha256=a8a318824cc77d1fd4b2bec
+    2ded92646630d7fe8619497b142c84a9e6f5a7293 (from requests>=2.20) editable=False>
+    chardet: <InstallRequirement object: chardet<3.1.0,>=3.0.2 from https://files.pythonh
+    osted.org/packages/bc/a9/01ffebfb562e4274b6487b4bb1ddec7ca55ec7510b22e4c51f14098443b8
+    /chardet-3.0.4-py2.py3-none-any.whl#sha256=fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed
+    4531e3e15460124c106691 (from requests>=2.20) editable=False>
+    certifi: <InstallRequirement object: certifi>=2017.4.17 from https://files.pythonhost
+    ed.org/packages/18/b0/8146a4f8dd402f60744fa380bc73ca47303cccf8b9190fd16a827281eac2/ce
+    rtifi-2019.9.11-py2.py3-none-any.whl#sha256=fd7c7c74727ddcf00e9acd26bba8da604ffec95bf
+    1c2144e67aff7a8b50e6cef (from requests>=2.20) editable=False>
+    """
     reqset_provider = resolve_possible_shim(reqset_provider)
     finder_provider = resolve_possible_shim(finder_provider)
     resolver_provider = resolve_possible_shim(resolver_provider)
     wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
     format_control_provider = resolve_possible_shim(format_control_provider)
     make_preparer_provider = resolve_possible_shim(make_preparer_provider)
+    req_tracker_provider = resolve_possible_shim(req_tracker_provider)
+    install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+    if install_command is None:
+        assert isinstance(install_cmd_provider, (type, functools.partial))
+        install_command = install_cmd_provider()
     kwarg_map = {
         "upgrade_strategy": upgrade_strategy,
         "force_reinstall": force_reinstall,
@@ -940,54 +1090,71 @@ def resolve(
         "cache_dir": cache_dir,
     }
     kwargs, options = populate_options(install_command, options, **kwarg_map)
-    kwargs = ensure_resolution_dirs(wheel_download_dir=wheel_download_dir, **kwargs)
-    wheel_download_dir = kwargs.pop("wheel_download_dir")
-    if session is None:
-        session = install_command._build_session(options)
-    if finder is None:
-        finder = finder_provider(install_command, options=options, session=session)
-    format_control = getattr(options, "format_control", None)
-    if not format_control:
-        format_control = format_control_provider(None, None)
-    wheel_cache = wheel_cache_provider(kwargs["cache_dir"], format_control)
-    ireq.is_direct = True
-    ireq.build_location(kwargs["build_dir"])
-    reqset = reqset_provider(
-        install_command,
-        options=options,
-        session=session,
-        wheel_download_dir=wheel_download_dir,
-        **kwargs
-    )
-    if getattr(reqset, "prepare_files", None):
-        reqset.add_requirement(ireq)
-        results = reqset.prepare_files(finder)
-        result = reqset.requirements
-        reqset.cleanup_files()
-        return result
-    if make_preparer_provider is None:
-        raise TypeError("Cannot create requirement preparer, cannot resolve!")
-    preparer_args = {
-        "build_dir": kwargs["build_dir"],
-        "src_dir": kwargs["src_dir"],
-        "download_dir": kwargs["download_dir"],
-        "wheel_download_dir": wheel_download_dir,
-        "build_isolation": kwargs["isolated"],
-        "install_cmd": install_command,
-        "options": options,
-        "finder": finder,
-        "session": session,
-    }
-    resolver_keys = [
-        "upgrade_strategy",
-        "force_reinstall",
-        "ignore_dependencies",
-        "ignore_installed",
-        "use_user_site",
-        "isolated",
-    ]
-    resolver_args = {key: kwargs[key] for key in resolver_keys if key in kwargs}
-    with make_preparer_provider(**preparer_args) as preparer:
+    with ExitStack() as ctx:
+        kwargs = ctx.enter_context(
+            ensure_resolution_dirs(wheel_download_dir=wheel_download_dir, **kwargs)
+        )
+        wheel_download_dir = kwargs.pop("wheel_download_dir")
+        if session is None:
+            session = get_session(install_cmd=install_command, options=options)
+        if finder is None:
+            finder = finder_provider(
+                install_command, options=options, session=session
+            )  # type: ignore
+        format_control = getattr(options, "format_control", None)
+        if not format_control:
+            format_control = format_control_provider(None, None)  # type: ignore
+        wheel_cache = wheel_cache_provider(
+            kwargs["cache_dir"], format_control
+        )  # type: ignore
+        ireq.is_direct = True  # type: ignore
+        ireq.build_location(kwargs["build_dir"])  # type: ignore
+        if reqset_provider is None:
+            raise TypeError(
+                "cannot resolve without a requirement set provider... failed!"
+            )
+        reqset = reqset_provider(
+            install_command,
+            options=options,
+            session=session,
+            wheel_download_dir=wheel_download_dir,
+            **kwargs
+        )  # type: ignore
+        if getattr(reqset, "prepare_files", None):
+            reqset.add_requirement(ireq)
+            results = reqset.prepare_files(finder)
+            result = reqset.requirements
+            reqset.cleanup_files()
+            return result
+        if make_preparer_provider is None:
+            raise TypeError("Cannot create requirement preparer, cannot resolve!")
+
+        preparer_args = {
+            "build_dir": kwargs["build_dir"],
+            "src_dir": kwargs["src_dir"],
+            "download_dir": kwargs["download_dir"],
+            "wheel_download_dir": wheel_download_dir,
+            "build_isolation": kwargs["isolated"],
+            "install_cmd": install_command,
+            "options": options,
+            "finder": finder,
+            "session": session,
+        }
+        # with req_tracker_provider() as req_tracker:
+        if isinstance(req_tracker_provider, (types.FunctionType, functools.partial)):
+            preparer_args["req_tracker"] = ctx.enter_context(req_tracker_provider())
+        resolver_keys = [
+            "upgrade_strategy",
+            "force_reinstall",
+            "ignore_dependencies",
+            "ignore_installed",
+            "use_user_site",
+            "isolated",
+        ]
+        resolver_args = {key: kwargs[key] for key in resolver_keys if key in kwargs}
+        if resolver_provider is None:
+            raise TypeError("Cannot resolve without a resolver provider... failed!")
+        preparer = ctx.enter_context(make_preparer_provider(**preparer_args))
         resolver = resolver_provider(
             finder=finder,
             preparer=preparer,
@@ -996,10 +1163,10 @@ def resolve(
             install_cmd=install_command,
             wheel_cache=wheel_cache,
             **resolver_args
-        )
+        )  # type: ignore
         reqset.add_requirement(ireq)
-        resolver.require_hashes = kwargs.get("require_hashes", False)
-        resolver.resolve(reqset)
+        resolver.require_hashes = kwargs.get("require_hashes", False)  # type: ignore
+        resolver.resolve(reqset)  # type: ignore
         results = reqset.requirements
         reqset.cleanup_files()
         return results

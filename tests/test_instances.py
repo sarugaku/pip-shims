@@ -64,6 +64,7 @@ from pip_shims import (
     parse_version,
     path_to_url,
     pip_version,
+    resolve,
     unpack_url,
     url_to_path,
 )
@@ -561,6 +562,13 @@ def test_get_packagefinder():
     best_version = candidates[-1]
     location = getattr(best_version, "location", getattr(best_version, "link", None))
     assert "pythonhosted" in location.url
+
+
+def test_resolve():
+    install_cmd = InstallCommand()
+    ireq = InstallRequirement.from_line("requests>=2.18")
+    result = resolve(ireq, install_command=install_cmd)
+    assert set(result.keys()) == {"requests", "chardet", "idna", "urllib3", "certifi"}
 
 
 def test_pypi():

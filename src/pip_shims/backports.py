@@ -1159,7 +1159,6 @@ def resolve(
             "use_user_site",
             "isolated",
             "use_user_site",
-            "require_hashes",
         ]
         resolver_args = {key: kwargs[key] for key in resolver_keys if key in kwargs}
         if resolver_provider is None:

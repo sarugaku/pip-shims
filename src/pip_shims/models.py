@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import collections
 import functools
@@ -535,7 +535,7 @@ class ShimmedPath(object):
         # type: (Union[Module, None], str) -> Type
         imported, result = self._shim_parent(imported, attribute_name)
         if result is not None:
-            assert isinstance(result, type)  # noqa
+            assert inspect.isclass(result)  # noqa
             result = self._ensure_methods(result)
             if self.provided_mixins:
                 result = add_mixin_to_class(result, self.provided_mixins)
@@ -706,7 +706,7 @@ class ShimmedPathCollection(object):
         # type: (Optional[Union[Type, ShimmedPathCollection]]) -> None
         if isinstance(mixin, ShimmedPathCollection):
             mixin = mixin.shim()
-        if mixin is not None and isinstance(mixin, type):
+        if mixin is not None and inspect.isclass(mixin):
             self.provided_mixins.append(mixin)
 
     def create_path(self, import_path, version_start, version_end=None):

@@ -240,8 +240,10 @@ def get_requirement_tracker(req_tracker_creator=None):
         with ExitStack() as ctx:
             if root is None:
                 root = ctx.enter_context(TemporaryDirectory(prefix="req-tracker")).name
-                ctx.enter_context(temp_environ())
-                os.environ["PIP_REQ_TRACKER"] = root
+                if root:
+                    root = str(root)
+                    ctx.enter_context(temp_environ())
+                    os.environ["PIP_REQ_TRACKER"] = root
             if required_args is not None and "root" in required_args:
                 req_tracker_args.append(root)
             with req_tracker_creator(*req_tracker_args) as tracker:

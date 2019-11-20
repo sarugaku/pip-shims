@@ -11,8 +11,20 @@ def get_base_import_path():
 BASE_IMPORT_PATH = get_base_import_path()
 
 
-def get_pip_version():
-    pip = importlib.import_module(BASE_IMPORT_PATH)
+def get_pip_version(import_path=BASE_IMPORT_PATH):
+    try:
+        pip = importlib.import_module(import_path)
+    except ImportError:
+        if import_path != "pip":
+            return get_pip_version(import_path="pip")
+        else:
+            import subprocess
+
+            version = subprocess.check_output(["pip", "--version"])
+            if version:
+                version = version.decode("utf-8").split()[1]
+                return version
+            return "0.0.0"
     version = getattr(pip, "__version__", None)
     return version
 

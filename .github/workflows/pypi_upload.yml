@@ -1,10 +1,10 @@
-name: Create Release & Upload To Test PyPI
+name: Create Release & Upload To PyPI
 
 on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - v?[0-9]+.[0-9]+.[0-9]+.*
+      - v?[0-9]+.[0-9]+.[0-9]+  # add .* to allow dev releases
 
 jobs:
   build:
@@ -42,5 +42,13 @@ jobs:
       run: |
         python -m pipenv run inv build
     - name: Upload to PyPI via Twine
+      # to upload to test pypi, pass --repository-url https://test.pypi.org/legacy/ and use secrets.TEST_PYPI_TOKEN
       run: |
-        python -m pipenv run twine upload --verbose -u '__token__' -p '${{ secrets.TEST_PYPI_TOKEN }}' --repository-url https://test.pypi.org/legacy/ dist/*
+        python -m pipenv run twine upload --verbose -u '__token__' -p '${{ secrets.PYPI_TOKEN }}' dist/*
+    - name: Pre-bump
+      run: |
+        git config --local user.name 'Github Action'
+        git config --local user.email action@github.com
+        python -m pipenv run inv bump-version -t dev
+        git commit -am 'pre-bump'
+        git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master

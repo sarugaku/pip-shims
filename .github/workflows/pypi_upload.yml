@@ -1,6 +1,8 @@
+name: Upload To Test PyPI
+
 on:
   release:
-    types: created
+    types: [created]
 
 jobs:
   build:

@@ -8,7 +8,10 @@ from . import shims
 __version__ = "0.3.5.dev0"
 
 
-old_module = sys.modules["pip_shims"]
+if "pip_shims" in sys.modules:
+    # mainly to keep a reference to the old module on hand so it doesn't get
+    # weakref'd away
+    old_module = sys.modules["pip_shims"]
 
 
 module = sys.modules["pip_shims"] = shims._new()

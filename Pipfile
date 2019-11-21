@@ -1,5 +1,6 @@
 [packages]
 pip_shims = { path = '.', editable = true, extras = ["tests", "dev"] }
+colorama = "*"
 
 [dev-packages]
 sphinx = '*'

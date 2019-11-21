@@ -76,91 +76,119 @@ many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_,
 
 .. _`Usage`:
 
-Usage
-******
-
-Importing a shim
-/////////////////
+mporting a shim
+--------------------
 
 You can use **pip-shims** to expose elements of **pip**'s internal API by importing them:
 
-  ::
+.. code-block:: pycon
 
-    from pip_shims import Wheel
-    mywheel = Wheel('/path/to/my/wheel.whl')
+    >>> from pip_shims import Wheel
+    >>> mywheel = Wheel('/path/to/my/wheel.whl')
+
+
+Resolving Dependencies
+----------------------------
+
+You can resolve the dependencies of a package using the shimmed resolver interface:
+
+.. code-block:: pycon
+
+    >>> from pip_shims.shims import resolve, InstallRequirement
+    >>> ireq = InstallRequirement.from_line("requests>=2.20")
+    >>> results = resolve(ireq)
+    >>> for k, v in results.items():
+    ...    print("{0}: {1!r}".format(k, v))
+    requests: <InstallRequirement object: requests>=2.20 from https://files.pythonhosted.org/packages/51/bd/23c926cd341ea6b7dd0b2a00aba99ae0f828be89d72b2190f27c11d4b7fb/requests-2.22.0-py2.py3-none-any.whl#sha256=9cf5292fcd0f598c671cfc1e0d7d1a7f13bb8085e9a590f48c010551dc6c4b31 editable=False>
+    idna: <InstallRequirement object: idna<2.9,>=2.5 from https://files.pythonhosted.org/packages/14/2c/cd551d81dbe15200be1cf41cd03869a46fe7226e7450af7a6545bfc474c9/idna-2.8-py2.py3-none-any.whl#sha256=ea8b7f6188e6fa117537c3df7da9fc686d485087abf6ac197f9c46432f7e4a3c (from requests>=2.20) editable=False>
+    urllib3: <InstallRequirement object: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 from https://files.pythonhosted.org/packages/b4/40/a9837291310ee1ccc242ceb6ebfd9eb21539649f193a7c8c86ba15b98539/urllib3-1.25.7-py2.py3-none-any.whl#sha256=a8a318824cc77d1fd4b2bec2ded92646630d7fe8619497b142c84a9e6f5a7293 (from requests>=2.20) editable=False>
+    chardet: <InstallRequirement object: chardet<3.1.0,>=3.0.2 from https://files.pythonhosted.org/packages/bc/a9/01ffebfb562e4274b6487b4bb1ddec7ca55ec7510b22e4c51f14098443b8/chardet-3.0.4-py2.py3-none-any.whl#sha256=fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed4531e3e15460124c106691 (from requests>=2.20) editable=False>
+    certifi: <InstallRequirement object: certifi>=2017.4.17 from https://files.pythonhosted.org/packages/18/b0/8146a4f8dd402f60744fa380bc73ca47303cccf8b9190fd16a827281eac2/certifi-2019.9.11-py2.py3-none-any.whl#sha256=fd7c7c74727ddcf00e9acd26bba8da604ffec95bf1c2144e67aff7a8b50e6cef (from requests>=2.20) editable=False>
+
+
 
 
 Available Shims
 ****************
 
 **pip-shims** provides the following compatibility shims:
-models             FormatControl               index
-req.constructors   install_req_from_line       req.req_install.InstallRequirement
-req.constructors   install_req_from_editable   req.req_install.InstallRequirement
 
 ======================== ========================================== =======================================
 Import Path               Import Name                                Former Path
 ======================== ========================================== =======================================
-req.constructors          _strip_extras                              req.req_install
-cli                       cmdoptions                                 cmdoptions
-cli.base_command          Command                                    basecommand
-cli.parser                ConfigOptionParser                         baseparser
-commands.freeze           DEV_PKGS
-exceptions                DistributionNotFound
-utils.hashes              FAVORITE_HASH
-models                    FormatControl                              index
-models.target_python      TargetPython
-models.selection_prefs    SelectionPreferences
-collector                 LinkCollector
-index                     LinkEvaluator
-index                     CandidatePreferences
-utils.misc                get_installed_distributions                utils
-utils.compat              stdlib_pkgs                                compat
-cli.cmdoptions            index_group                                cmdoptions
-cli.req_command           SessionCommandMixin
-req.req_install           InstallRequirement
-req.constructors          install_req_from_line                      req.req_install.InstallRequirement
-req.constructors          install_req_from_editable                  req.req_install.InstallRequirement
-req.constructors          install_req_from_req_string
-req.req_uninstall         UninstallPathSet
-distributions             make_distribution_for_install_requirement  operations.prepare.make_abstract_dist
-distributions.base        AbstractDistribution
-distributions.source      SourceDistribution
-distributions.installed   InstalledDistribution
-distributions.wheel       WheelDistribution
+__version__               pip_version
+<shimmed>                 get_package_finder
+<shimmed>                 get_requirement_set
+<shimmed>                 get_resolver
 <shimmed>                 is_archive_file                            download
 <shimmed>                 is_file_url                                download
-utils.misc                is_installable_dir                         utils
+<shimmed>                 make_preparer
+<shimmed>                 resolve
+<shimmed>                 shim_unpack
+cache                     WheelCache                                 wheel
+cli                       cmdoptions                                 cmdoptions
+cli.base_command          Command                                    basecommand
+cli.cmdoptions            index_group                                cmdoptions
+cli.cmdoptions            make_option_group                          cmdoptions
+cli.parser                ConfigOptionParser                         baseparser
+cli.req_command           SessionCommandMixin
+collector                 LinkCollector
+commands                  commands_dict
+commands.freeze           DEV_PKGS
+commands.install          InstallCommand
+distributions             make_distribution_for_install_requirement  operations.prepare.make_abstract_dist
+distributions.base        AbstractDistribution
+distributions.installed   InstalledDistribution
+distributions.source      SourceDistribution
+distributions.wheel       WheelDistribution
+download                  path_to_url
+download                  unpack_url
+exceptions                BadCommand
+exceptions                BestVersionAlreadyInstalled
+exceptions                CommandError
+exceptions                DistributionNotFound
+exceptions                DistributionNotFound
+exceptions                InstallationError
+exceptions                PipError
+exceptions                PreviousBuildDirError
+exceptions                RequirementsFileParseError
+exceptions                UninstallationError
+index                     CandidateEvaluator
+index                     CandidatePreferences
+index                     LinkEvaluator
+index                     PackageFinder
+index                     parse_version
+locations                 USER_CACHE_DIR
+models                    FormatControl                              index
+models.index              PyPI
 models.link               Link                                       index
 models.search_scope       SearchScope
-operations.prepare        make_abstract_dist                         req.req_set
-cli.cmdoptions            make_option_group                          cmdoptions
-index                     CandidateEvaluator
-index                     PackageFinder
-req.req_file              parse_requirements
-index                     parse_version
-download                  path_to_url
-__version__               pip_version
-exceptions                PipError
-exceptions                InstallationError
-exceptions                UninstallationError
-exceptions                DistributionNotFound
-exceptions                RequirementsFileParseError
-exceptions                BestVersionAlreadyInstalled
-exceptions                BadCommand
-exceptions                CommandError
-exceptions                PreviousBuildDirError
-operations.prepare        RequirementPreparer
-operations.freeze         FrozenRequirement                          <`__init__`>
-req.req_set               RequirementSet
-req.req_tracker           RequirementTracker
-resolve                   Resolver
+models.selection_prefs    SelectionPreferences
+models.target_python      TargetPython
 network.cache             SafeFileCache                              download
+operations.freeze         FrozenRequirement                          <`__init__`>
+operations.prepare        make_abstract_dist                         req.req_set
+operations.prepare        RequirementPreparer
+pep425tags                get_supported
+pep425tags                get_tags
+req.constructors          _strip_extras                              req.req_install
+req.constructors          install_req_from_editable                  req.req_install.InstallRequirement
+req.constructors          install_req_from_line                      req.req_install.InstallRequirement
+req.constructors          install_req_from_req_string
+req.req_file              parse_requirements
+req.req_install           InstallRequirement
+req.req_set               RequirementSet
+req.req_tracker           get_requirement_tracker
+req.req_tracker           RequirementTracker
+req.req_uninstall         UninstallPathSet
+resolve                   Resolver
+utils.compat              stdlib_pkgs                                compat
+utils.hashes              FAVORITE_HASH
+utils.misc                get_installed_distributions                utils
+utils.misc                is_installable_dir                         utils
+utils.temp_dir            TempDirectory
 utils.urls                url_to_path                                download
-download                  unpack_url
-locations                 USER_CACHE_DIR
 vcs.versioncontrol        VcsSupport                                 vcs.VcsSupport
 wheel                     Wheel
 wheel                     WheelBuilder
-cache                     WheelCache                                 wheel
 ======================== ========================================== =======================================

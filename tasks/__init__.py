@@ -25,10 +25,10 @@ def _get_git_root(ctx):
 def clean(ctx):
     """Clean previously built package artifacts.
     """
-    ctx.run(f"python setup.py clean")
+    ctx.run("python setup.py clean")
     dist = ROOT.joinpath("dist")
     build = ROOT.joinpath("build")
-    print(f"[clean] Removing {dist} and {build}")
+    print("[clean] Removing dist and build dirs")
     if dist.exists():
         shutil.rmtree(str(dist))
     if build.exists():
@@ -227,14 +227,14 @@ def release(ctx, type_, repo, prebump=PREBUMP, yes=False):
 
 @invoke.task
 def build_docs(ctx):
-    _current_version = _read_version()
-    minor = [str(i) for i in parver.Version.parse(_current_version).release[:2]]
+    _current_version = _read_text_version()
+    minor = [str(i) for i in _current_version.release[:2]]
     docs_folder = (_get_git_root(ctx) / "docs").as_posix()
     if not docs_folder.endswith("/"):
         docs_folder = "{0}/".format(docs_folder)
     args = ["--ext-autodoc", "--ext-viewcode", "-o", docs_folder]
     args.extend(["-A", "'Dan Ryan <dan@danryan.co>'"])
-    args.extend(["-R", _current_version])
+    args.extend(["-R", str(_current_version)])
     args.extend(["-V", ".".join(minor)])
     args.extend(["-e", "-M", "-F", f"src/{PACKAGE_NAME}"])
     print("Building docs...")

@@ -23,6 +23,7 @@ from pip_shims import (
     FormatControl,
     FrozenRequirement,
     InstallationError,
+    InstallCommand,
     InstallRequirement,
     Link,
     LinkCollector,
@@ -48,6 +49,8 @@ from pip_shims import (
     _strip_extras,
     cmdoptions,
     get_installed_distributions,
+    get_package_finder,
+    get_requirement_tracker,
     index_group,
     install_req_from_editable,
     install_req_from_line,
@@ -61,6 +64,7 @@ from pip_shims import (
     parse_version,
     path_to_url,
     pip_version,
+    resolve,
     unpack_url,
     url_to_path,
 )
@@ -231,10 +235,7 @@ def test_resolution(tmpdir, PipCommand):
             link_collector = LinkCollector(session=session, search_scope=search_scope)
             finder_args = {"link_collector": link_collector}
         else:
-            finder_args = {
-                "search_scope": search_scope,
-                "session": session,
-            }
+            finder_args = {"search_scope": search_scope, "session": session}
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,
@@ -347,12 +348,10 @@ def test_resolution(tmpdir, PipCommand):
             )
             resolver_kwargs["make_install_req"] = make_install_req
         else:
-            resolver_kwargs.update(
-                {"isolated": False, "wheel_cache": wheel_cache,}
-            )
+            resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
         resolver = None
         preparer = None
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             # Pip 18 uses a requirement tracker to prevent fork bombs
             if req_tracker:
                 preparer_kwargs["req_tracker"] = req_tracker
@@ -443,10 +442,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
             link_collector = LinkCollector(session=session, search_scope=search_scope)
             finder_args = {"link_collector": link_collector}
         else:
-            finder_args = {
-                "search_scope": search_scope,
-                "session": session,
-            }
+            finder_args = {"search_scope": search_scope, "session": session}
         finder_args.update(
             {
                 "candidate_prefs": candidate_prefs,
@@ -486,7 +482,12 @@ def test_wheelbuilder(tmpdir, PipCommand):
     }
     if parse_version(pip_version) > parse_version("19.99.99"):
         kwargs.update(
-            {"session": session, "finder": finder,}
+            {
+                "session": session,
+                "finder": finder,
+                "require_hashes": False,
+                "use_user_site": False,
+            }
         )
     ireq = InstallRequirement.from_editable(
         "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
@@ -525,7 +526,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 {"use_user_site": False, "require_hashes": False,}
             )
         wheel_cache = kwargs.pop("wheel_cache")
-        with RequirementTracker() as req_tracker:
+        with get_requirement_tracker() as req_tracker:
             if req_tracker:
                 kwargs["req_tracker"] = req_tracker
             preparer = RequirementPreparer(**kwargs)
@@ -535,6 +536,39 @@ def test_wheelbuilder(tmpdir, PipCommand):
             builder = WheelBuilder(*builder_args)
             output_file = builder._build_one(ireq, output_dir.strpath)
     assert output_file, output_file
+
+
+def test_get_packagefinder():
+    install_cmd = InstallCommand()
+    finder = get_package_finder(
+        install_cmd, python_versions=("27", "35", "36", "37", "38"), implementation="cp"
+    )
+    ireq = InstallRequirement.from_line("requests>=2.18")
+    if install_req_from_line:
+        ireq2 = install_req_from_line("requests>=2.18")
+        assert str(ireq) == str(ireq2)
+    requests_candidates = finder.find_all_candidates(ireq.name)
+    candidates = sorted(
+        [
+            c
+            for c in requests_candidates
+            if c.version
+            in ireq.specifier.filter(
+                (candidate.version for candidate in requests_candidates)
+            )
+        ],
+        key=lambda c: c.version,
+    )
+    best_version = candidates[-1]
+    location = getattr(best_version, "location", getattr(best_version, "link", None))
+    assert "pythonhosted" in location.url
+
+
+def test_resolve():
+    install_cmd = InstallCommand()
+    ireq = InstallRequirement.from_line("requests>=2.18")
+    result = resolve(ireq, install_command=install_cmd)
+    assert set(result.keys()) == {"requests", "chardet", "idna", "urllib3", "certifi"}
 
 
 def test_pypi():

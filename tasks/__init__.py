@@ -25,10 +25,10 @@ def _get_git_root(ctx):
 def clean(ctx):
     """Clean previously built package artifacts.
     """
-    ctx.run(f"python setup.py clean")
+    ctx.run("python setup.py clean")
     dist = ROOT.joinpath("dist")
     build = ROOT.joinpath("build")
-    print(f"[clean] Removing {dist} and {build}")
+    print("[clean] Removing dist and build dirs")
     if dist.exists():
         shutil.rmtree(str(dist))
     if build.exists():

@@ -10,6 +10,8 @@ jobs:
   build:
     name: pip-shims PyPI Upload
     runs-on: ubuntu-latest
+    env:
+      CI: "1"
 
     steps:
     - name: Checkout code
@@ -41,4 +43,4 @@ jobs:
         python -m pipenv run inv build
     - name: Upload to PyPI via Twine
       run: |
-        twine upload --verbose -u '__token__' -p '${{ secrets.TEST_PYPI_TOKEN }}' --repository-url https://test.pypi.org/legacy/ dist/*
+        python -m pipenv run twine upload --verbose -u '__token__' -p '${{ secrets.TEST_PYPI_TOKEN }}' --repository-url https://test.pypi.org/legacy/ dist/*

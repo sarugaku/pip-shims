@@ -1,0 +1,28 @@
+on:
+  release:
+    types: created
+
+jobs:
+  build:
+    name: pip-shims PyPI Upload
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install latest tools for build
+      run: |
+        python -m pip install --upgrade pip setuptools wheel pipenv invoke
+        python -m pipenv install --dev --pre
+        python -m pipenv run pip install invoke
+    - name: Build wheels
+      run: |
+        python -m pipenv run inv build
+    - name: Upload to PyPI via Twine
+      run: |
+        twine upload --verbose -u '__token__' -p '${{ secrets.TEST_PYPI_TOKEN }}' --repository-url https://test.pypi.org/legacy/ dist/*

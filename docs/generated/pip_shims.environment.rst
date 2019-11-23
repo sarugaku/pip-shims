@@ -2,9 +2,9 @@ pip\_shims.environment
 ======================
 
 .. automodule:: pip_shims.environment
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
    .. rubric:: Functions
 

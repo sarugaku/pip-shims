@@ -30,14 +30,13 @@ def _get_branch(ctx):
 def clean(ctx):
     """Clean previously built package artifacts.
     """
-    ctx.run("python setup.py clean")
     dist = ROOT.joinpath("dist")
     build = ROOT.joinpath("build")
     print("[clean] Removing dist and build dirs")
     if dist.exists():
-        shutil.rmtree(str(dist))
+        shutil.rmtree(dist.as_posix())
     if build.exists():
-        shutil.rmtree(str(build))
+        shutil.rmtree(build.as_posix())
 
 
 def _read_version():

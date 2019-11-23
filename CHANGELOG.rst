@@ -10,6 +10,7 @@ Features
 - Fully reimplemented critical functionality to abstract logic while improving maintainability and ability to reason about the core operations
 - Added numerous helper functions to reduce maintenance burden
 - Added fully backward compatible library native shims to call ``pip`` functions:
+
  - ``populate_options``
  - ``get_requirement_set``
  - ``get_package_finder``
@@ -17,6 +18,7 @@ Features
  - ``make_preparer``
  - ``get_resolver``
  - ``resolve``
+
 - Added design drawings
 - Implemented ``ShimmedPath`` and ``ShimmedPathCollection`` abstractions  `#37 <https://github.com/sarugaku/pip-shims/issues/37>`_
 
@@ -28,16 +30,16 @@ Features
 --------
 
 - Added ``SessionCommandMixin``, ``CandidateEvaluator``, ``CandidatePreferences``, ``LinkCollector``, ``LinkEvaluator``, ``TargetPython``, ``SearchScope``, and ``SelectionPreferences`` to exposed classes and ``install_req_from_req_string`` to exposed functions.  `#33 <https://github.com/sarugaku/pip-shims/issues/33>`_
-  
+
 
 Bug Fixes
 ---------
 
 - Added override to the ``Command`` class to automatically fill in default values for ``name`` and ``summary`` which are now required in ``__init__``.
   - Added mixin to the Command class to continue supporting ``_build_session`` method.  `#32 <https://github.com/sarugaku/pip-shims/issues/32>`_
-  
+
 - Shimmed functions for ``is_file_url`` and ``is_archive_file``.  `#34 <https://github.com/sarugaku/pip-shims/issues/34>`_
-  
+
 - Updated the paths for the following moved items:
   - ``SafeFileCache`` -> ``network.cache``
   - ``Link`` -> ``models.link.Link``
@@ -53,9 +55,9 @@ Features
 --------
 
 - Added ``commands.freeze.DEV_PKGS`` and ``utils.compat.stdlib_pkgs`` shims.  `#25 <https://github.com/sarugaku/pip-shims/issues/25>`_
-  
+
 - Updated ``PackageFinder`` test and added ``CandidateEvaluator`` import starting with ``pip>=19.1`` for finding prerelease candidates.  `#27 <https://github.com/sarugaku/pip-shims/issues/27>`_
-  
+
 
 Bug Fixes
 ---------

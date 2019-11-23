@@ -16,7 +16,11 @@ Welcome to pip_shims's documentation!
    pip_shims.environment
    pip_shims.utils
 
-.. include quickstart
+.. toctree::
+   :maxdepth: 4
+
+   quickstart
+   ../CHANGELOG
 
 
 Indices and tables

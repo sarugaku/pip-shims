@@ -1,7 +1,24 @@
 0.4.0 (2019-11-22)
 ==================
 
-No significant changes.
+Features
+--------
+
+- Improved documentation and added fundamentally re-architected the library
+- Added improved docstrings and example usages
+- Included type annotations for many types and shims
+- Fully reimplemented critical functionality to abstract logic while improving maintainability and ability to reason about the core operations
+- Added numerous helper functions to reduce maintenance burden
+- Added fully backward compatible library native shims to call ``pip`` functions:
+ - ``populate_options``
+ - ``get_requirement_set``
+ - ``get_package_finder``
+ - ``shim_unpack``
+ - ``make_preparer``
+ - ``get_resolver``
+ - ``resolve``
+- Added design drawings
+- Implemented ``ShimmedPath`` and ``ShimmedPathCollection`` abstractions  `#37 <https://github.com/sarugaku/pip-shims/issues/37>`_
 
 
 0.3.4 (2019-11-18)

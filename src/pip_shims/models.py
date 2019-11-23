@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Helper module for shimming functionality across pip versions.
+"""
 from __future__ import absolute_import, print_function
 
 import collections

@@ -1,5 +1,5 @@
-pip\_shims.shims module
-=======================
+pip\_shims.shims
+================
 
 .. automodule:: pip_shims.shims
     :members:

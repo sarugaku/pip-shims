@@ -1,4 +1,7 @@
 # -*- coding=utf-8 -*-
+"""
+Backports and helper functionality to support using new functionality.
+"""
 from __future__ import absolute_import
 
 import atexit

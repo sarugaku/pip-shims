@@ -76,7 +76,7 @@ many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_,
 
 .. _`Usage`:
 
-mporting a shim
+Importing a shim
 --------------------
 
 You can use **pip-shims** to expose elements of **pip**'s internal API by importing them:

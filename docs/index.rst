@@ -12,6 +12,10 @@ Welcome to pip_shims's documentation!
 
    quickstart
    pip_shims
+   pip_shims.shims
+   pip_shims.models
+   pip_shims.backports
+   pip_shims.utils
 
 
 Indices and tables

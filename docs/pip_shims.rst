@@ -10,7 +10,6 @@ Submodules
 ----------
 
 .. toctree::
+   :glob:
 
-   pip_shims.shims
-   pip_shims.utils
-
+   *

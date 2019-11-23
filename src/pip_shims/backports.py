@@ -602,6 +602,7 @@ def shim_unpack(
     hashes=None,  # type: Optional[Any]
     progress_bar="off",  # type: str
     only_download=None,  # type: Optional[bool]
+    downloader_provider=None,  # type: Optional[TShimmedFunc]
     session=None,  # type: Optional[Any]
 ):
     # (...) -> None
@@ -624,12 +625,15 @@ def shim_unpack(
     :param str progress_bar: Indicates progress par usage during download, defatuls to
         off.
     :param Optional[bool] only_download: Whether to skip install, defaults to None.
+    :param Optional[ShimmedPathCollection] downloader_provider: A downloader class
+        to instantiate, if applicable.
     :param Optional[`~requests.Session`] session: A PipSession instance, defaults to
         None.
     :return: The result of unpacking the url.
     :rtype: None
     """
     unpack_fn = resolve_possible_shim(unpack_fn)
+    downloader_provider = resolve_possible_shim(downloader_provider)
     required_args = inspect.getargs(unpack_fn.__code__).args  # type: ignore
     unpack_kwargs = {"download_dir": download_dir}
     if ireq:
@@ -650,6 +654,10 @@ def shim_unpack(
         unpack_kwargs["only_download"] = only_download
     if session is not None and "session" in required_args:
         unpack_kwargs["session"] = session
+    if "downloader" in required_args and downloader_provider is not None:
+        assert session is not None
+        assert progress_bar is not None
+        unpack_kwargs["downloader"] = downloader_provider(session, progress_bar)
     return unpack_fn(**unpack_kwargs)  # type: ignore
 
 

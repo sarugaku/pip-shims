@@ -167,6 +167,7 @@ models.selection_prefs    SelectionPreferences
 models.target_python      TargetPython
 network.cache             SafeFileCache                              download
 operations.freeze         FrozenRequirement                          <`__init__`>
+operations.prepare        Downloader
 operations.prepare        make_abstract_dist                         req.req_set
 operations.prepare        RequirementPreparer
 pep425tags                get_supported

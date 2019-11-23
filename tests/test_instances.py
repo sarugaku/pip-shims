@@ -65,7 +65,7 @@ from pip_shims import (
     path_to_url,
     pip_version,
     resolve,
-    unpack_url,
+    shim_unpack,
     url_to_path,
 )
 
@@ -509,7 +509,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
     if parse_version(pip_version) >= parse_version("10"):
         unpack_kwargs["progress_bar"] = "off"
     if not is_file_url(ireq.link):
-        unpack_url(**unpack_kwargs)
+        shim_unpack(**unpack_kwargs)
     output_file = None
     if parse_version(pip_version) < parse_version("10"):
         kwargs["session"] = finder.session

@@ -914,12 +914,19 @@ is_file_url = ShimmedPathCollection("is_file_url", ImportTypes.FUNCTION)
 is_file_url.set_default(fallback_is_file_url)
 is_file_url.create_path("download.is_file_url", "7.0.0", "19.2.3")
 
+Downloader = ShimmedPathCollection("Downloader", ImportTypes.CLASS)
+Downloader.create_path("operations.prepare.Downloader", "19.3.9", "9999")
+
 unpack_url = ShimmedPathCollection("unpack_url", ImportTypes.FUNCTION)
 unpack_url.create_path("download.unpack_url", "7.0.0", "19.3.9")
 unpack_url.create_path("operations.prepare.unpack_url", "20.0", "9999")
 
 shim_unpack = ShimmedPathCollection("shim_unpack", ImportTypes.FUNCTION)
-shim_unpack.set_default(functools.partial(backports.shim_unpack, unpack_fn=unpack_url))
+shim_unpack.set_default(
+    functools.partial(
+        backports.shim_unpack, unpack_fn=unpack_url, downloader_provider=Downloader
+    )
+)
 
 is_installable_dir = ShimmedPathCollection("is_installable_dir", ImportTypes.FUNCTION)
 is_installable_dir.create_path("utils.misc.is_installable_dir", "10.0.0", "9999")

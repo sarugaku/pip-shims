@@ -14,7 +14,6 @@ import types
 
 import six
 from packaging import specifiers
-from vistir.compat import TemporaryDirectory
 
 from .environment import MYPY_RUNNING
 from .utils import (
@@ -23,6 +22,11 @@ from .utils import (
     nullcontext,
     suppress_setattr,
 )
+
+if sys.version_info[:2] < (3, 5):
+    from backports.tempfile import TemporaryDirectory
+else:
+    from tempfile import TemporaryDirectory
 
 if six.PY3:
     from contextlib import ExitStack

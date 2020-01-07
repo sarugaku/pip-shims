@@ -246,7 +246,7 @@ def get_requirement_tracker(req_tracker_creator=None):
         _, required_args = get_method_args(req_tracker_creator.__init__)  # type: ignore
         with ExitStack() as ctx:
             if root is None:
-                root = ctx.enter_context(TemporaryDirectory(prefix="req-tracker")).name
+                root = ctx.enter_context(TemporaryDirectory(prefix="req-tracker"))
                 if root:
                     root = str(root)
                     ctx.enter_context(temp_environ())

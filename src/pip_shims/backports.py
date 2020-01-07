@@ -276,7 +276,7 @@ def ensure_resolution_dirs(**kwargs):
             for key in keys:
                 if kwargs.get(key) is not None:
                     continue
-                target = os.path.join(base_dir.name, key)
+                target = os.path.join(base_dir, key)
                 os.makedirs(target)
                 kwargs[key] = target
             yield kwargs

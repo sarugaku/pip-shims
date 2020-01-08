@@ -1023,6 +1023,13 @@ RequirementTracker.create_path("req.req_tracker.RequirementTracker", "7.0.0", "9
 TempDirectory = ShimmedPathCollection("TempDirectory", ImportTypes.CLASS)
 TempDirectory.create_path("utils.temp_dir.TempDirectory", "7.0.0", "9999")
 
+global_tempdir_manager = ShimmedPathCollection(
+    "global_tempdir_manager", ImportTypes.CONTEXTMANAGER
+)
+global_tempdir_manager.create_path(
+    "utils.temp_dir.global_tempdir_manager", "7.0.0", "9999"
+)
+
 get_requirement_tracker = ShimmedPathCollection(
     "get_requirement_tracker", ImportTypes.CONTEXTMANAGER
 )
@@ -1065,7 +1072,15 @@ WheelCache.create_path("wheel.WheelCache", "7", "9.0.3")
 
 WheelBuilder = ShimmedPathCollection("WheelBuilder", ImportTypes.CLASS)
 WheelBuilder.create_path("wheel.WheelBuilder", "7.0.0", "19.9")
-WheelBuilder.create_path("wheel_builder.WheelBuilder", "20.0", "9999")
+
+build = ShimmedPathCollection("build", ImportTypes.FUNCTION)
+build.create_path("wheel_builder.build", "19.9", "9999")
+
+build_one = ShimmedPathCollection("build_one", ImportTypes.FUNCTION)
+build_one.create_path("wheel_builder._build_one", "19.9", "9999")
+
+build_one_inside_env = ShimmedPathCollection("build_one_inside_env", ImportTypes.FUNCTION)
+build_one_inside_env.create_path("wheel_builder._build_one_inside_env", "19.9", "9999")
 
 AbstractDistribution = ShimmedPathCollection("AbstractDistribution", ImportTypes.CLASS)
 AbstractDistribution.create_path(
@@ -1124,6 +1139,7 @@ make_preparer.set_default(
         preparer_fn=RequirementPreparer,
         downloader_provider=Downloader,
         req_tracker_fn=get_requirement_tracker,
+        finder_provider=get_package_finder,
     )
 )
 
@@ -1163,5 +1179,22 @@ resolve.set_default(
         format_control_provider=FormatControl,
         make_preparer_provider=make_preparer,
         req_tracker_provider=get_requirement_tracker,
+        tempdir_manager_provider=global_tempdir_manager,
+    )
+)
+
+
+build_wheel = ShimmedPathCollection("build_wheel", ImportTypes.FUNCTION)
+build_wheel.set_default(
+    functools.partial(
+        compat.build_wheel,
+        install_command_provider=InstallCommand,
+        wheel_cache_provider=WheelCache,
+        wheel_builder_provider=WheelBuilder,
+        build_one_provider=build_one,
+        build_one_inside_env_provider=build_one_inside_env,
+        build_many_provider=build,
+        preparer_provider=make_preparer,
+        format_control_provider=FormatControl,
     )
 )

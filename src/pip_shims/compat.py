@@ -44,6 +44,7 @@ if MYPY_RUNNING:
         Dict,
         Generator,
         Generic,
+        Iterable,
         Iterator,
         List,
         Optional,
@@ -57,6 +58,7 @@ if MYPY_RUNNING:
     TFinder = TypeVar("TFinder")
     TResolver = TypeVar("TResolver")
     TReqTracker = TypeVar("TReqTracker")
+    TReqSet = TypeVar("TReqSet")
     TLink = TypeVar("TLink")
     TSession = TypeVar("TSession", bound=Session)
     TCommand = TypeVar("TCommand", covariant=True)
@@ -731,6 +733,30 @@ def shim_unpack(
     return unpack_fn(**unpack_kwargs)  # type: ignore
 
 
+def _ensure_finder(
+    finder=None,  # type: Optional[TFinder]
+    finder_provider=None,  # type: Optional[Callable]
+    install_cmd=None,  # type: Optional[TCommandInstance]
+    options=None,  # type: Optional[Values]
+    session=None,  # type: Optional[TSession]
+):
+    if not any([finder, finder_provider, install_cmd]):
+        raise TypeError(
+            "RequirementPreparer requires a packagefinder but no InstallCommand"
+            " was provided to build one and none was passed in."
+        )
+    if finder is not None:
+        return finder
+    else:
+        if session is None:
+            session = get_session(install_cmd=install_cmd, options=options)
+        if finder_provider is not None and options is not None:
+            finder_provider(options=options, session=session)
+        else:
+            finder = get_package_finder(install_cmd, options=options, session=session)
+        return finder
+
+
 @contextlib.contextmanager
 def make_preparer(
     preparer_fn,  # type: TShimmedFunc
@@ -750,6 +776,7 @@ def make_preparer(
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
+    finder_provider=None,  # type: Optional[TShimmedFunc]
 ):
     # (...) -> ContextManager
     """
@@ -785,8 +812,10 @@ def make_preparer(
         preparing requirements
     :param Optional[Union[TReqTracker, TShimmedFunc]] req_tracker: The requirement
         tracker to use for building packages, defaults to None
+    :param Optional[TShimmedFunc] downloader_provider: A downloader provider
     :param Optional[TCommandInstance] install_cmd: The install command used to create
         the finder, session, and options if needed, defaults to None
+    :param Optional[TShimmedFunc] finder_provider: A package finder provider
     :yield: A new requirement preparer instance
     :rtype: ContextManager[:class:`~pip._internal.operations.prepare.RequirementPreparer`]
 
@@ -808,6 +837,8 @@ def make_preparer(
     <pip._internal.operations.prepare.RequirementPreparer object at 0x7f8a2734be80>
     """
     preparer_fn = resolve_possible_shim(preparer_fn)
+    downloader_provider = resolve_possible_shim(downloader_provider)
+    finder_provider = resolve_possible_shim(finder_provider)
     required_args = inspect.getargs(preparer_fn.__init__.__code__).args  # type: ignore
     if not req_tracker and not req_tracker_fn and "req_tracker" in required_args:
         raise TypeError("No requirement tracker and no req tracker generator found!")
@@ -816,8 +847,8 @@ def make_preparer(
     req_tracker_fn = resolve_possible_shim(req_tracker_fn)
     pip_options_created = options is None
     session_is_required = "session" in required_args
-    downloader_is_required = "downloader" in required_args
     finder_is_required = "finder" in required_args
+    downloader_is_required = "downloader" in required_args
     options_map = {
         "src_dir": src_dir,
         "download_dir": download_dir,
@@ -845,16 +876,16 @@ def make_preparer(
     elif all([session is None, session_is_required]):
         session = get_session(install_cmd=install_cmd, options=options)
         preparer_args["session"] = session
-    if all([finder is None, install_cmd is None, finder_is_required]):
-        raise TypeError(
-            "RequirementPreparer requires a packagefinder but no InstallCommand"
-            " was provided to build one and none was passed in."
+    if finder_is_required:
+        finder = _ensure_finder(
+            finder=finder,
+            finder_provider=finder_provider,
+            install_cmd=install_cmd,
+            options=options,
+            session=session,
         )
-    elif all([finder is None, finder_is_required]):
-        finder = get_package_finder(install_cmd, options=options, session=session)
         preparer_args["finder"] = finder
     if downloader_is_required:
-        downloader_provider = resolve_possible_shim(downloader_provider)
         preparer_args["downloader"] = downloader_provider(session, progress_bar)
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:
@@ -1052,6 +1083,7 @@ def resolve(
     wheel_cache_provider=None,  # type: Optional[TShimmedFunc]
     format_control_provider=None,  # type: Optional[TShimmedFunc]
     make_preparer_provider=None,  # type: Optional[TShimmedFunc]
+    tempdir_manager_provider=None,  # type: Optional[TShimmedFunc]
     options=None,  # type: Optional[Values]
     session=None,  # type: Optional[TSession]
     resolver=None,  # type: Optional[TResolver]
@@ -1096,6 +1128,8 @@ def resolve(
     :param TShimmedFunc format_control_provider: The provider function to use to generate
         a format_control instance if needed.
     :param TShimmedFunc make_preparer_provider: Callable or shim for generating preparers.
+    :param Optional[TShimmedFunc] tempdir_manager_provider: Shim for generating tempdir
+        manager for pip temporary directories
     :param Optional[Values] options: Pip options to use if needed, defaults to None
     :param Optional[TSession] session: Existing session to use for getting requirements,
         defaults to None
@@ -1169,6 +1203,7 @@ def resolve(
     make_preparer_provider = resolve_possible_shim(make_preparer_provider)
     req_tracker_provider = resolve_possible_shim(req_tracker_provider)
     install_cmd_provider = resolve_possible_shim(install_cmd_provider)
+    tempdir_manager_provider = resolve_possible_shim(tempdir_manager_provider)
     if install_command is None:
         assert isinstance(install_cmd_provider, (type, functools.partial))
         install_command = install_cmd_provider()
@@ -1188,6 +1223,7 @@ def resolve(
     }
     kwargs, options = populate_options(install_command, options, **kwarg_map)
     with ExitStack() as ctx:
+        ctx.enter_context(tempdir_manager_provider())
         kwargs = ctx.enter_context(
             ensure_resolution_dirs(wheel_download_dir=wheel_download_dir, **kwargs)
         )
@@ -1270,3 +1306,176 @@ def resolve(
         results = reqset.requirements
         reqset.cleanup_files()
         return results
+
+
+def build_wheel(
+    req=None,  # type: Optional[TInstallRequirement]
+    reqset=None,  # type: Optional[Union[TReqSet, Iterable[TInstallRequirement]]]
+    output_dir=None,  # type: Optional[str]
+    preparer=None,  # type: Optional[TPreparer]
+    wheel_cache=None,  # type: Optional[TWheelCache]
+    build_options=None,  # type: Optional[List[str]]
+    global_options=None,  # type: Optional[List[str]]
+    check_binary_allowed=None,  # type: Optional[Callable[TInstallRequirement, bool]]
+    no_clean=False,  # type: bool
+    session=None,  # type: Optional[TSession]
+    finder=None,  # type: Optional[TFinder]
+    install_command=None,  # type: Optional[TCommand]
+    req_tracker=None,  # type: Optional[TReqTracker]
+    build_dir=None,  # type: Optional[str]
+    src_dir=None,  # type: Optional[str]
+    download_dir=None,  # type: Optional[str]
+    wheel_download_dir=None,  # type: Optional[str]
+    cache_dir=None,  # type: Optional[str]
+    use_user_site=False,  # type: bool
+    use_pep517=None,  # type: Optional[bool]
+    format_control_provider=None,  # type: Optional[TShimmedFunc]
+    wheel_cache_provider=None,  # type: Optional[TShimmedFunc]
+    preparer_provider=None,  # type: Optional[TShimmedFunc]
+    wheel_builder_provider=None,  # type: Optional[TShimmedFunc]
+    build_one_provider=None,  # type: Optional[TShimmedFunc]
+    build_one_inside_env_provider=None,  # type: Optional[TShimmedFunc]
+    build_many_provider=None,  # type: Optional[TShimmedFunc]
+    install_command_provider=None,  # type: Optional[TShimmedFunc]
+    finder_provider=None,  # type: Optional[TShimmedFunc]
+):
+    # type: (...) -> Optional[Union[str, Tuple[List[TInstallRequirement], List[TInstallRequirement]]]]
+    """
+    Build a wheel or a set of wheels
+
+    :raises TypeError: Raised when no requirements are provided
+    :param Optional[TInstallRequirement] req:  An `InstallRequirement` to build
+    :param Optional[TReqSet] reqset: A `RequirementSet` instance (`pip<10`) or an
+        iterable of `InstallRequirement` instances (`pip>=10`) to build
+    :param Optional[str] output_dir: Target output directory, only useful when building
+        one wheel using pip>=20.0
+    :param Optional[TPreparer] preparer: A preparer instance, defaults to None
+    :param Optional[TWheelCache] wheel_cache: A wheel cache instance, defaults to None
+    :param Optional[List[str]] build_options: A list of build options to pass in
+    :param Optional[List[str]] global_options: A list of global options to pass in
+    :param Optional[Callable[TInstallRequirement, bool]] check_binary_allowed: A callable
+        to check whether we are allowed to build and cache wheels for an ireq
+    :param bool no_clean: Whether to avoid cleaning up wheels
+    :param Optional[TSession] session: A `PipSession` instance to pass to create a
+        `finder` if necessary
+    :param Optional[TFinder] finder: A `PackageFinder` instance to use for generating a
+        `WheelBuilder` instance on `pip<20`
+    :param Optional[TCommandInstance] install_command:  The install command used to
+        create the finder, session, and options if needed, defaults to None.
+    :param Optional[TReqTracker] req_tracker: An optional requirement tracker instance,
+        if one already exists
+    :param Optional[str] build_dir: Passthrough parameter for building preparer
+    :param Optional[str] src_dir: Passthrough parameter for building preparer
+    :param Optional[str] download_dir: Passthrough parameter for building preparer
+    :param Optional[str] wheel_download_dir: Passthrough parameter for building preparer
+    :param Optional[str] cache_dir: Passthrough cache directory for wheel cache options
+    :param bool use_user_site: Whether to use the user site directory when preparing
+        install requirements on `pip<20`
+    :param Optional[bool] use_pep517: When set to *True* or *False*, prefers building
+        with or without pep517 as specified, otherwise uses requirement preference.
+        Only works for single requirements.
+    :param Optional[TShimmedFunc] format_control_provider: A provider for the
+        `FormatControl` class
+    :param Optional[TShimmedFunc] wheel_cache_provider: A provider for the `WheelCache`
+        class
+    :param Optional[TShimmedFunc] preparer_provider: A provider for the
+        `RequirementPreparer` class
+    :param Optional[TShimmedFunc] wheel_builder_provider: A provider for the
+        `WheelBuilder` class, if it exists
+    :param Optional[TShimmedFunc] build_one_provider: A provider for the `_build_one`
+        function, if it exists
+    :param Optional[TShimmedFunc] build_one_inside_env_provider: A provider for the
+        `_build_one_inside_env` function, if it exists
+    :param Optional[TShimmedFunc] build_many_provider: A provider for the `build`
+        function, if it exists
+    :param Optional[TShimmedFunc] install_command_provider: A shim for providing new
+        install command instances
+    :param TShimmedFunc finder_provider: A provider to package finder instances
+    :return: A tuple of successful and failed install requirements or else a path to
+        a wheel
+    :rtype: Optional[Union[str, Tuple[List[TInstallRequirement], List[TInstallRequirement]]]]
+    """
+    wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
+    preparer = resolve_possible_shim(preparer)
+    wheel_builder_provider = resolve_possible_shim(wheel_builder_provider)
+    build_one_provider = resolve_possible_shim(build_one_provider)
+    build_one_inside_env_provider = resolve_possible_shim(build_one_inside_env_provider)
+    build_many_provider = resolve_possible_shim(build_many_provider)
+    install_cmd_provider = resolve_possible_shim(install_command_provider)
+    format_control_provider = resolve_possible_shim(format_control_provider)
+    finder_provider = resolve_possible_shim(finder_provider)
+    global_options = [] if global_options is None else global_options
+    build_options = [] if build_options is None else build_options
+    options = None
+    kwarg_map = {
+        "cache_dir": cache_dir,
+        "src_dir": src_dir,
+        "download_dir": download_dir,
+        "wheel_download_dir": wheel_download_dir,
+        "build_dir": build_dir,
+        "use_user_site": use_user_site,
+    }
+    if not req and not reqset:
+        raise TypeError("Must provide either a requirement or requirement set to build")
+    if wheel_cache is None and (reqset is not None or output_dir is None):
+        if install_command is None:
+            assert isinstance(install_cmd_provider, (type, functools.partial))
+            install_command = install_cmd_provider()
+        kwargs, options = populate_options(install_command, options, **kwarg_map)
+        format_control = getattr(options, "format_control", None)
+        if not format_control:
+            format_control = format_control_provider(None, None)  # type: ignore
+        wheel_cache = wheel_cache_provider(options.cache_dir, format_control)
+    if req and not reqset and not output_dir:
+        output_dir = wheel_cache.get_path_for_link(req.link)
+    if not reqset and build_one_provider:
+        yield build_one_provider(req, output_dir, build_options, global_options)
+    elif build_many_provider:
+        yield build_many_provider(
+            reqset, wheel_cache, build_options, global_options, check_binary_allowed
+        )
+    else:
+        with ExitStack() as ctx:
+            if session is None and finder is None:
+                session = get_session(install_cmd=install_command, options=options)
+                finder = finder_provider(
+                    install_command, options=options, session=session
+                )
+            if preparer is None:
+                preparer_kwargs = {
+                    "build_dir": kwargs["build_dir"],
+                    "src_dir": kwargs["src_dir"],
+                    "download_dir": kwargs["download_dir"],
+                    "wheel_download_dir": kwargs["wheel_download_dir"],
+                    "finder": finder,
+                    "session": session
+                    if session
+                    else get_session(install_cmd=install_command, options=options),
+                    "install_cmd": install_command,
+                    "options": options,
+                    "use_user_site": use_user_site,
+                    "req_tracker": req_tracker,
+                }
+                preparer = ctx.enter_context(preparer_provider(**preparer_kwargs))
+            check_bin = check_binary_allowed if check_binary_allowed else lambda x: True
+            builder_kwargs = {
+                "requirement_set": reqset,
+                "finder": finder,
+                "preparer": preparer,
+                "wheel_cache": wheel_cache,
+                "no_clean": no_clean,
+                "build_options": build_options,
+                "global_options": global_options,
+                "check_binary_allowed": check_bin,
+            }
+            builder = call_function_with_correct_args(
+                wheel_builder_provider, **builder_kwargs
+            )
+            if req and not reqset:
+                if not output_dir:
+                    output_dir = wheel_cache.get_path_for_link(req.link)
+                if use_pep517 is not None:
+                    req.use_pep517 = use_pep517
+                yield builder._build_one(req, output_dir)
+            else:
+                yield builder.build(reqset)

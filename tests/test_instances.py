@@ -48,10 +48,13 @@ from pip_shims import (
     WheelBuilder,
     WheelCache,
     _strip_extras,
+    build_one,
+    build_wheel,
     cmdoptions,
     get_installed_distributions,
     get_package_finder,
     get_requirement_tracker,
+    global_tempdir_manager,
     index_group,
     install_req_from_editable,
     install_req_from_line,
@@ -354,10 +357,12 @@ def test_resolution(tmpdir, PipCommand):
             resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
         resolver = None
         preparer = None
-        with get_requirement_tracker() as req_tracker:
+        with global_tempdir_manager(), get_requirement_tracker() as req_tracker:
             # Pip 18 uses a requirement tracker to prevent fork bombs
             if req_tracker:
                 preparer_kwargs["req_tracker"] = req_tracker
+            if parse_version(pip_version) >= parse_version("19.3.9"):
+                preparer_kwargs.pop("session", None)
             preparer = RequirementPreparer(**preparer_kwargs)
             resolver_kwargs["preparer"] = preparer
             reqset = RequirementSet()
@@ -485,12 +490,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
     }
     if parse_version(pip_version) > parse_version("19.99.99"):
         kwargs.update(
-            {
-                "session": session,
-                "finder": finder,
-                "require_hashes": False,
-                "use_user_site": False,
-            }
+            {"finder": finder, "require_hashes": False, "use_user_site": False,}
         )
     ireq = InstallRequirement.from_editable(
         "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
@@ -514,17 +514,35 @@ def test_wheelbuilder(tmpdir, PipCommand):
     if not is_file_url(ireq.link):
         shim_unpack(**unpack_kwargs)
     output_file = None
+    ireq.is_direct = True
+    build_wheel_kwargs = {
+        "finder": finder,
+        "req": ireq,
+        "output_dir": output_dir.strpath,
+        "session": session,
+        "build_dir": build_dir,
+        "src_dir": source_dir,
+        "download_dir": download_dir,
+        "wheel_download_dir": wheel_download_dir,
+        "wheel_cache": wheel_cache,
+    }
     if parse_version(pip_version) < parse_version("10"):
-        kwargs["session"] = finder.session
         reqset = RequirementSet(**kwargs)
+        build_wheel_kwargs["reqset"] = reqset
+        # XXX: We can skip all of the intervening steps and go straight to the
+        # wheel generation bit
         ireq.is_direct = True
         builder = WheelBuilder(reqset, finder)
         output_file = builder._build_one(ireq, output_dir.strpath)
     else:
+
         kwargs.update(
             {"progress_bar": "off", "build_isolation": False,}
         )
         if parse_version(pip_version) > parse_version("19.99.99"):
+            downloader = Downloader(session=session, progress_bar="off")
+            kwargs.pop("progress_bar", None)
+            kwargs["downloader"] = downloader
             kwargs.update(
                 {"use_user_site": False, "require_hashes": False,}
             )
@@ -536,8 +554,13 @@ def test_wheelbuilder(tmpdir, PipCommand):
             builder_args = [preparer, wheel_cache]
             if parse_version(pip_version) < parse_version("19.3"):
                 builder_args = [finder] + builder_args
-            builder = WheelBuilder(*builder_args)
-            output_file = builder._build_one(ireq, output_dir.strpath)
+            if parse_version(pip_version) < parse_version("19.3.9"):
+                builder = WheelBuilder(*builder_args)
+                output_file = builder._build_one(ireq, output_dir.strpath)
+            else:
+                output_file = build_one(ireq, output_dir.strpath, [], [])
+    # XXX: skipping to here is functionally the same and should pass all tests
+    # output_file = build_wheel(**build_wheel_kwargs)
     assert output_file, output_file
 
 

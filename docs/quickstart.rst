@@ -117,6 +117,7 @@ Available Shims
 Import Path               Import Name                                Former Path
 ======================== ========================================== =======================================
 __version__               pip_version
+<shimmed>                 build_wheel
 <shimmed>                 get_package_finder
 <shimmed>                 get_requirement_set
 <shimmed>                 get_resolver
@@ -187,9 +188,13 @@ utils.compat              stdlib_pkgs                                compat
 utils.hashes              FAVORITE_HASH
 utils.misc                get_installed_distributions                utils
 utils.misc                is_installable_dir                         utils
+utils.temp_dir            global_tempdir_manager
 utils.temp_dir            TempDirectory
 utils.urls                url_to_path                                download
 vcs.versioncontrol        VcsSupport                                 vcs.VcsSupport
 wheel                     Wheel
 wheel                     WheelBuilder
+wheel_builder             build
+wheel_builder             build_one
+wheel_builder             build_one_inside_env
 ======================== ========================================== =======================================

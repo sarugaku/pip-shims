@@ -527,6 +527,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
         "wheel_cache": wheel_cache,
     }
     if parse_version(pip_version) < parse_version("10"):
+        kwargs["session"] = session
         reqset = RequirementSet(**kwargs)
         build_wheel_kwargs["reqset"] = reqset
         # XXX: We can skip all of the intervening steps and go straight to the

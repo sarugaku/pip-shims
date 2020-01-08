@@ -9,6 +9,7 @@ import contextlib
 import functools
 import inspect
 import os
+import re
 import sys
 import types
 
@@ -211,6 +212,71 @@ class LinkEvaluator(object):
         self._ignore_compatibility = ignore_compatibility
 
         self.project_name = project_name
+
+
+class InvalidWheelFilename(Exception):
+    """Wheel Filename is Invalid"""
+
+
+class Wheel(object):
+    wheel_file_re = re.compile(
+        r"""^(?P<namever>(?P<name>.+?)-(?P<ver>.*?))
+        ((-(?P<build>\d[^-]*?))?-(?P<pyver>.+?)-(?P<abi>.+?)-(?P<plat>.+?)
+        \.whl|\.dist-info)$""",
+        re.VERBOSE,
+    )
+
+    def __init__(self, filename):
+        # type: (str) -> None
+        wheel_info = self.wheel_file_re.match(filename)
+        if not wheel_info:
+            raise InvalidWheelFilename("%s is not a valid wheel filename." % filename)
+        self.filename = filename
+        self.name = wheel_info.group("name").replace("_", "-")
+        # we'll assume "_" means "-" due to wheel naming scheme
+        # (https://github.com/pypa/pip/issues/1150)
+        self.version = wheel_info.group("ver").replace("_", "-")
+        self.build_tag = wheel_info.group("build")
+        self.pyversions = wheel_info.group("pyver").split(".")
+        self.abis = wheel_info.group("abi").split(".")
+        self.plats = wheel_info.group("plat").split(".")
+
+        # All the tag combinations from this file
+        self.file_tags = {
+            (x, y, z) for x in self.pyversions for y in self.abis for z in self.plats
+        }
+
+    def get_formatted_file_tags(self):
+        # type: () -> List[str]
+        """
+        Return the wheel's tags as a sorted list of strings.
+        """
+        return sorted("-".join(tag) for tag in self.file_tags)
+
+    def support_index_min(self, tags):
+        # type: (List[Any]) -> int
+        """
+        Return the lowest index that one of the wheel's file_tag combinations
+        achieves in the given list of supported tags.
+
+        For example, if there are 8 supported tags and one of the file tags
+        is first in the list, then return 0.
+
+        :param tags: the PEP 425 tags to check the wheel against, in order
+            with most preferred first.
+        :raises ValueError: If none of the wheel's file tags match one of
+            the supported tags.
+        """
+        return min(tags.index(tag) for tag in self.file_tags if tag in tags)
+
+    def supported(self, tags):
+        # type: (List[Any]) -> bool
+        """
+        Return whether the wheel is compatible with one of the given tags.
+
+        :param tags: the PEP 425 tags to check the wheel against.
+        """
+        return not self.file_tags.isdisjoint(tags)
 
 
 def resolve_possible_shim(target):
@@ -682,6 +748,7 @@ def make_preparer(
     use_user_site=None,  # type: Optional[bool]
     req_tracker=None,  # type: Optional[Union[TReqTracker, TShimmedFunc]]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
+    downloader_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
 ):
     # (...) -> ContextManager
@@ -744,9 +811,12 @@ def make_preparer(
     required_args = inspect.getargs(preparer_fn.__init__.__code__).args  # type: ignore
     if not req_tracker and not req_tracker_fn and "req_tracker" in required_args:
         raise TypeError("No requirement tracker and no req tracker generator found!")
+    if "downloader" in required_args and not downloader_provider:
+        raise TypeError("no downloader provided, but one is required to continue!")
     req_tracker_fn = resolve_possible_shim(req_tracker_fn)
     pip_options_created = options is None
     session_is_required = "session" in required_args
+    downloader_is_required = "downloader" in required_args
     finder_is_required = "finder" in required_args
     options_map = {
         "src_dir": src_dir,
@@ -774,6 +844,7 @@ def make_preparer(
         )
     elif all([session is None, session_is_required]):
         session = get_session(install_cmd=install_cmd, options=options)
+        preparer_args["session"] = session
     if all([finder is None, install_cmd is None, finder_is_required]):
         raise TypeError(
             "RequirementPreparer requires a packagefinder but no InstallCommand"
@@ -781,7 +852,10 @@ def make_preparer(
         )
     elif all([finder is None, finder_is_required]):
         finder = get_package_finder(install_cmd, options=options, session=session)
-    preparer_args.update({"finder": finder, "session": session})
+        preparer_args["finder"] = finder
+    if downloader_is_required:
+        downloader_provider = resolve_possible_shim(downloader_provider)
+        preparer_args["downloader"] = downloader_provider(session, progress_bar)
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:
         if "req_tracker" in required_args:

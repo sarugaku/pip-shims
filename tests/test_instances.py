@@ -20,6 +20,7 @@ from pip_shims import (
     CommandError,
     ConfigOptionParser,
     DistributionNotFound,
+    Downloader,
     FormatControl,
     FrozenRequirement,
     InstallationError,
@@ -329,12 +330,14 @@ def test_resolution(tmpdir, PipCommand):
             "use_user_site": False,
         }
         if parse_version(pip_version) > parse_version("19.99.99"):
+            downloader = Downloader(session=session, progress_bar="off")
+            preparer_kwargs.pop("progress_bar", None)
             preparer_kwargs.update(
                 {
-                    "session": session,
                     "finder": finder,
                     "require_hashes": False,
                     "use_user_site": False,
+                    "downloader": downloader,
                 }
             )
         else:

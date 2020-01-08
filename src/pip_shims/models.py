@@ -915,7 +915,7 @@ is_file_url.set_default(fallback_is_file_url)
 is_file_url.create_path("download.is_file_url", "7.0.0", "19.2.3")
 
 Downloader = ShimmedPathCollection("Downloader", ImportTypes.CLASS)
-Downloader.create_path("operations.prepare.Downloader", "19.3.9", "9999")
+Downloader.create_path("network.download.Downloader", "19.3.9", "9999")
 
 unpack_url = ShimmedPathCollection("unpack_url", ImportTypes.FUNCTION)
 unpack_url.create_path("download.unpack_url", "7.0.0", "19.3.9")
@@ -1056,7 +1056,8 @@ VcsSupport.create_path("vcs.VcsSupport", "7.0.0", "19.1.1")
 VcsSupport.create_path("vcs.versioncontrol.VcsSupport", "19.2", "9999")
 
 Wheel = ShimmedPathCollection("Wheel", ImportTypes.CLASS)
-Wheel.create_path("wheel.Wheel", "7.0.0", "9999")
+Wheel.create_path("wheel.Wheel", "7.0.0", "19.3.9")
+Wheel.set_default(compat.Wheel)
 
 WheelCache = ShimmedPathCollection("WheelCache", ImportTypes.CLASS)
 WheelCache.create_path("cache.WheelCache", "10.0.0", "9999")
@@ -1090,6 +1091,9 @@ SourceDistribution.create_path("distributions.source.SourceDistribution", "20.0"
 WheelDistribution = ShimmedPathCollection("WheelDistribution", ImportTypes.CLASS)
 WheelDistribution.create_path("distributions.wheel.WheelDistribution", "19.1.2", "9999")
 
+Downloader = ShimmedPathCollection("Downloader", ImportTypes.CLASS)
+Downloader.create_path("network.download.Downloader", "20.0.0", "9999")
+
 PyPI = ShimmedPathCollection("PyPI", ImportTypes.ATTRIBUTE)
 PyPI.create_path("models.index.PyPI", "7.0.0", "9999")
 
@@ -1118,6 +1122,7 @@ make_preparer.set_default(
         compat.make_preparer,
         install_cmd_provider=InstallCommand,
         preparer_fn=RequirementPreparer,
+        downloader_provider=Downloader,
         req_tracker_fn=get_requirement_tracker,
     )
 )

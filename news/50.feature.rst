@@ -1,0 +1,1 @@
+Added a ``build_wheel`` shim function which can build either a single ``InstallRequirement`` or an iterable of ``InstallRequirement`` instances.

@@ -940,7 +940,10 @@ Link.create_path("index.Link", "7.0.0", "18.1")
 
 make_abstract_dist = ShimmedPathCollection("make_abstract_dist", ImportTypes.FUNCTION)
 make_abstract_dist.create_path(
-    "distributions.make_distribution_for_install_requirement", "19.1.2", "9999"
+    "distributions.make_distribution_for_install_requirement", "20.0.0", "9999"
+)
+make_abstract_dist.create_path(
+    "distributions.make_distribution_for_install_requirement", "19.1.2", "19.3.9"
 )
 make_abstract_dist.create_path(
     "operations.prepare.make_abstract_dist", "10.0.0", "19.1.1"
@@ -948,10 +951,13 @@ make_abstract_dist.create_path(
 make_abstract_dist.create_path("req.req_set.make_abstract_dist", "7.0.0", "9.0.3")
 
 make_distribution_for_install_requirement = ShimmedPathCollection(
-    "make_distribution_for_install_requirement", ImportTypes.CLASS
+    "make_distribution_for_install_requirement", ImportTypes.FUNCTION
 )
 make_distribution_for_install_requirement.create_path(
-    "distributions.make_distribution_for_install_requirement", "19.1.2", "9999"
+    "distributions.make_distribution_for_install_requirement", "20.0.0", "9999"
+)
+make_distribution_for_install_requirement.create_path(
+    "distributions.make_distribution_for_install_requirement", "19.1.2", "19.9.9"
 )
 
 make_option_group = ShimmedPathCollection("make_option_group", ImportTypes.FUNCTION)

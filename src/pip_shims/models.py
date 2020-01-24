@@ -1107,7 +1107,7 @@ SourceDistribution.create_path(
 SourceDistribution.create_path(
     "distributions.source.legacy.SourceDistribution", "19.3.0", "19.9"
 )
-SourceDistribution.create_path("distributions.source.SourceDistribution", "20.0", "9999")
+SourceDistribution.create_path("distributions.sdist.SourceDistribution", "20.0", "9999")
 
 WheelDistribution = ShimmedPathCollection("WheelDistribution", ImportTypes.CLASS)
 WheelDistribution.create_path("distributions.wheel.WheelDistribution", "19.1.2", "9999")

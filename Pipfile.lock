@@ -568,6 +568,7 @@
                 "sha256:163b0632d4e31cef212976cf57b43d9fd6b0bac6e67c26015d611a647d5e7424",
                 "sha256:562aa70af2e0d434367d9790ad37aed893de47f1693e4201fd1d3dca15d19b96"
             ],
+            "markers": "python_version >= '3.6',
             "version": "==0.7.0"
         },
         "pip-shims": {
@@ -745,6 +746,7 @@
                 "sha256:e7c7661f7276507bce416eaae22040fd91ca471b5b33c13f8ff21137ed6f248c",
                 "sha256:ecc6de77df3ef68fee966bb8cb4e067e84d4d1f397d0ef6fce46913663540d77"
             ],
+            "markers": "python_version >= '3.6'",
             "version": "==2020.1.8"
         },
         "requests": {

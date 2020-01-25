@@ -3,7 +3,7 @@ pip_shims = { path = '.', editable = true, extras = ["tests", "dev"] }
 colorama = "*"
 
 [dev-packages]
-sphinx = '*'
+sphinx = '<2.0'
 sphinx-rtd-theme = "*"
 
 [scripts]

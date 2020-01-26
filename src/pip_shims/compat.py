@@ -1231,9 +1231,7 @@ def resolve(
         if session is None:
             session = get_session(install_cmd=install_command, options=options)
         if finder is None:
-            finder = finder_provider(
-                install_command, options=options, session=session
-            )  # type: ignore
+            finder = finder_provider(install_command, options=options, session=session)  # type: ignore
         format_control = getattr(options, "format_control", None)
         if not format_control:
             format_control = format_control_provider(None, None)  # type: ignore
@@ -1246,13 +1244,7 @@ def resolve(
             raise TypeError(
                 "cannot resolve without a requirement set provider... failed!"
             )
-        reqset = reqset_provider(
-            install_command,
-            options=options,
-            session=session,
-            wheel_download_dir=wheel_download_dir,
-            **kwargs
-        )  # type: ignore
+        reqset = reqset_provider(install_command, options=options, session=session, wheel_download_dir=wheel_download_dir, **kwargs)  # type: ignore
         if getattr(reqset, "prepare_files", None):
             reqset.add_requirement(ireq)
             results = reqset.prepare_files(finder)

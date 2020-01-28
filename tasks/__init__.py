@@ -86,11 +86,6 @@ def _render_log():
         None,
         definitions,
     )
-    project_options = {
-        "name": config["package"],
-        "version": _read_text_version(),
-        "date": datetime.date.today().isoformat(),
-    }
     rendered = render_fragments(
         pathlib.Path(config["template"]).read_text(encoding="utf-8"),
         config["issue_format"],
@@ -98,7 +93,6 @@ def _render_log():
         definitions,
         config["underlines"][1:],
         False,  # Don't add newlines to wrapped text.
-        project_options,
     )
     return rendered
 

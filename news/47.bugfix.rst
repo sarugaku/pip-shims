@@ -1,1 +1,0 @@
-Added a compatibility shim to provide ongoing access to the ``Wheel`` class which is removed in ``pip>19.3.1``.

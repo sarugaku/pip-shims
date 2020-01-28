@@ -1,1 +1,0 @@
-Added ``Downloader`` class which is now passed to ``shim_unpack`` implementation.

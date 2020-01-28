@@ -1,1 +1,0 @@
-Exposed ``global_tempdir_manager`` for handling ``TempDirectory`` instance contexts.

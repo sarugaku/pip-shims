@@ -1,1 +1,0 @@
-Added mapping for ``distributions.make_distribution_for_install`` to ``make_abstract_dist`` for ``pip>=20.0``.

@@ -1,3 +1,28 @@
+0.5.0 (2020-01-28)
+==================
+
+Features
+--------
+
+- Exposed ``build``, ``build_one``, and ``build_one_inside_env`` from ``wheel_builder`` module starting in ``pip>=20``.  `#49 <https://github.com/sarugaku/pip-shims/issues/49>`_
+  
+- Added a ``build_wheel`` shim function which can build either a single ``InstallRequirement`` or an iterable of ``InstallRequirement`` instances.  `#50 <https://github.com/sarugaku/pip-shims/issues/50>`_
+  
+- Exposed ``global_tempdir_manager`` for handling ``TempDirectory`` instance contexts.  `#51 <https://github.com/sarugaku/pip-shims/issues/51>`_
+  
+
+Bug Fixes
+---------
+
+- Added ``Downloader`` class which is now passed to ``shim_unpack`` implementation.  `#42 <https://github.com/sarugaku/pip-shims/issues/42>`_
+  
+- Updated references to the ``Downloader`` class to point at ``pip._internal.network.download.Downloader`` which is where it resides on pip master for ``pip>19.3.1``.  `#46 <https://github.com/sarugaku/pip-shims/issues/46>`_
+  
+- Added a compatibility shim to provide ongoing access to the ``Wheel`` class which is removed in ``pip>19.3.1``.  `#47 <https://github.com/sarugaku/pip-shims/issues/47>`_
+  
+- Added mapping for ``distributions.make_distribution_for_install`` to ``make_abstract_dist`` for ``pip>=20.0``.  `#52 <https://github.com/sarugaku/pip-shims/issues/52>`_
+
+
 0.4.0 (2019-11-22)
 ==================
 

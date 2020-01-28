@@ -1,1 +1,0 @@
-Exposed ``build``, ``build_one``, and ``build_one_inside_env`` from ``wheel_builder`` module starting in ``pip>=20``.

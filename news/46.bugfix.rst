@@ -1,1 +1,0 @@
-Updated references to the ``Downloader`` class to point at ``pip._internal.network.download.Downloader`` which is where it resides on pip master for ``pip>19.3.1``.

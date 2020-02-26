@@ -1,0 +1,1 @@
+Fixed incorrect session creation via ``pip_shims.compat.get_session`` which inadvertently passed a tuple to pip when building a session instance.

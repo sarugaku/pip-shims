@@ -412,7 +412,7 @@ def get_session(
         assert isinstance(install_cmd_provider, (type, functools.partial))
         install_cmd = install_cmd_provider()
     if options is None:
-        options = install_cmd.parser.parse_args([])  # type: ignore
+        options, _ = install_cmd.parser.parse_args([])  # type: ignore
     session = install_cmd._build_session(options)  # type: ignore
     assert session is not None
     atexit.register(session.close)

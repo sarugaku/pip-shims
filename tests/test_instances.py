@@ -72,6 +72,7 @@ from pip_shims import (
     shim_unpack,
     url_to_path,
 )
+from pip_shims.compat import get_session
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
@@ -612,3 +613,9 @@ def test_stdlib_pkgs():
     from pip_shims.shims import stdlib_pkgs
 
     assert "argparse" in stdlib_pkgs
+
+
+def test_get_session():
+    cmd = InstallCommand()
+    sess = get_session(install_cmd=cmd)
+    assert type(sess).__base__.__qualname__ == "Session"

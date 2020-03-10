@@ -40,15 +40,18 @@ jobs:
     - name: Install latest tools for build
       run: |
         python -m pip install --upgrade pip setuptools wheel pipenv invoke
-        python -m pipenv install --dev --pre
+        python -m pipenv install --dev
         python -m pipenv run pip install invoke
     - name: Build wheels
       run: |
         python -m pipenv run inv build
-    - name: Upload to PyPI via Twine
-      # to upload to test pypi, pass --repository-url https://test.pypi.org/legacy/ and use secrets.TEST_PYPI_TOKEN
-      run: |
-        python -m pipenv run twine upload --verbose -u '__token__' -p '${{ secrets.PYPI_TOKEN }}' dist/*
+    # to upload to test pypi, pass repository_url: https://test.pypi.org/legacy/ and use secrets.TEST_PYPI_TOKEN
+    - name: Publish a Python distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.pypi_password }}
+        packages_dir: dist/
     # git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
     # we need to use a deploy key for this to get around branch protection as the default token fails
     - name: Pre-bump

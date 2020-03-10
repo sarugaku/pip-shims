@@ -1,0 +1,2 @@
+Added ``wheel_cache`` context manager helper for managing global context when creating wheel wheel_cache instances.
+

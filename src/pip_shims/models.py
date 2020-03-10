@@ -1048,7 +1048,8 @@ get_requirement_tracker.create_path(
 
 Resolver = ShimmedPathCollection("Resolver", ImportTypes.CLASS)
 Resolver.create_path("resolve.Resolver", "7.0.0", "19.1.1")
-Resolver.create_path("legacy_resolve.Resolver", "19.1.2", "9999")
+Resolver.create_path("legacy_resolve.Resolver", "19.1.2", "20.0.89999")
+Resolver.create_path("resolution.legacy.resolver.Resolver", "20.0.99999", "99999")
 
 SafeFileCache = ShimmedPathCollection("SafeFileCache", ImportTypes.CLASS)
 SafeFileCache.create_path("network.cache.SafeFileCache", "19.3.0", "9999")

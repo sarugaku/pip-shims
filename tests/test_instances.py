@@ -72,6 +72,7 @@ from pip_shims import (
     shim_unpack,
     url_to_path,
 )
+from pip_shims.compat import get_session
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
@@ -303,8 +304,8 @@ def test_resolution(tmpdir, PipCommand):
     wheel_download_dir = CACHE_DIR.mkdir("wheels")
     pkg_download_dir = CACHE_DIR.mkdir("pkgs")
     results = None
-    wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
     if parse_version(pip_version) < parse_version("10.0"):
+        wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
         reqset = RequirementSet(
             build_dir.strpath,
             source_dir.strpath,
@@ -345,16 +346,18 @@ def test_resolution(tmpdir, PipCommand):
             )
         else:
             resolver_kwargs["session"] = session
-        if parse_version(pip_version) >= parse_version("19.3"):
-            make_install_req = partial(
-                install_req_from_req_string,
-                isolated=False,
-                wheel_cache=wheel_cache,
-                # use_pep517=use_pep517,
-            )
-            resolver_kwargs["make_install_req"] = make_install_req
-        else:
-            resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
+        with global_tempdir_manager():
+            wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
+            if parse_version(pip_version) >= parse_version("19.3"):
+                make_install_req = partial(
+                    install_req_from_req_string,
+                    isolated=False,
+                    wheel_cache=wheel_cache,
+                    # use_pep517=use_pep517,
+                )
+                resolver_kwargs["make_install_req"] = make_install_req
+            else:
+                resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
         resolver = None
         preparer = None
         with global_tempdir_manager(), get_requirement_tracker() as req_tracker:
@@ -371,7 +374,10 @@ def test_resolution(tmpdir, PipCommand):
             resolver = Resolver(**resolver_kwargs)
             resolver.require_hashes = False
             results = resolver._resolve_one(reqset, ireq)
-            reqset.cleanup_files()
+            try:
+                reqset.cleanup_files()
+            except AttributeError:
+                pass
     results = set(results)
     result_names = [r.name for r in results]
     assert "chardet" in result_names
@@ -400,8 +406,9 @@ def test_frozen_req():
 
 def test_wheel_cache():
     fc = FormatControl(None, None)
-    w = WheelCache(USER_CACHE_DIR, fc)
-    assert w.__class__.__name__ == "WheelCache"
+    with global_tempdir_manager():
+        w = WheelCache(USER_CACHE_DIR, fc)
+        assert w.__class__.__name__ == "WheelCache"
 
 
 def test_vcs_support():
@@ -480,86 +487,87 @@ def test_wheelbuilder(tmpdir, PipCommand):
     source_dir = tmpdir.mkdir("source_dir")
     download_dir = tmpdir.mkdir("download_dir")
     wheel_download_dir = CACHE_DIR.mkdir("wheels")
-    wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
-    kwargs = {
-        "build_dir": build_dir.strpath,
-        "src_dir": source_dir.strpath,
-        "download_dir": download_dir.strpath,
-        "wheel_download_dir": wheel_download_dir.strpath,
-        "wheel_cache": wheel_cache,
-    }
-    if parse_version(pip_version) > parse_version("19.99.99"):
-        kwargs.update(
-            {"finder": finder, "require_hashes": False, "use_user_site": False,}
-        )
-    ireq = InstallRequirement.from_editable(
-        "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
-    )
-    ireq.populate_link(finder, False, False)
-    ireq.ensure_has_source_dir(kwargs["src_dir"])
-    # Ensure the remote artifact is downloaded locally. For wheels, it is
-    # enough to just download because we'll use them directly. For an sdist,
-    # we need to unpack so we can build it.
-    unpack_kwargs = {
-        "session": session,
-        "hashes": ireq.hashes(True),
-        "link": ireq.link,
-        "location": ireq.source_dir,
-        "download_dir": kwargs["download_dir"],
-    }
-    if parse_version(pip_version) < parse_version("19.2.0"):
-        unpack_kwargs["only_download"] = ireq.is_wheel
-    if parse_version(pip_version) >= parse_version("10"):
-        unpack_kwargs["progress_bar"] = "off"
-    if not is_file_url(ireq.link):
-        shim_unpack(**unpack_kwargs)
-    output_file = None
-    ireq.is_direct = True
-    build_wheel_kwargs = {
-        "finder": finder,
-        "req": ireq,
-        "output_dir": output_dir.strpath,
-        "session": session,
-        "build_dir": build_dir,
-        "src_dir": source_dir,
-        "download_dir": download_dir,
-        "wheel_download_dir": wheel_download_dir,
-        "wheel_cache": wheel_cache,
-    }
-    if parse_version(pip_version) < parse_version("10"):
-        kwargs["session"] = session
-        reqset = RequirementSet(**kwargs)
-        build_wheel_kwargs["reqset"] = reqset
-        # XXX: We can skip all of the intervening steps and go straight to the
-        # wheel generation bit
-        ireq.is_direct = True
-        builder = WheelBuilder(reqset, finder)
-        output_file = builder._build_one(ireq, output_dir.strpath)
-    else:
-
-        kwargs.update(
-            {"progress_bar": "off", "build_isolation": False,}
-        )
+    with global_tempdir_manager():
+        wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
+        kwargs = {
+            "build_dir": build_dir.strpath,
+            "src_dir": source_dir.strpath,
+            "download_dir": download_dir.strpath,
+            "wheel_download_dir": wheel_download_dir.strpath,
+            "wheel_cache": wheel_cache,
+        }
         if parse_version(pip_version) > parse_version("19.99.99"):
-            downloader = Downloader(session=session, progress_bar="off")
-            kwargs.pop("progress_bar", None)
-            kwargs["downloader"] = downloader
             kwargs.update(
-                {"use_user_site": False, "require_hashes": False,}
+                {"finder": finder, "require_hashes": False, "use_user_site": False,}
             )
-        wheel_cache = kwargs.pop("wheel_cache")
-        with get_requirement_tracker() as req_tracker:
-            if req_tracker:
-                kwargs["req_tracker"] = req_tracker
-            preparer = RequirementPreparer(**kwargs)
-            builder_args = [preparer, wheel_cache]
-            if parse_version(pip_version) < parse_version("19.3"):
-                builder_args = [finder] + builder_args
-            if parse_version(pip_version) < parse_version("19.3.9"):
-                builder = WheelBuilder(*builder_args)
-                output_file = builder._build_one(ireq, output_dir.strpath)
-            else:
-                output_file = build_one(ireq, output_dir.strpath, [], [])
+        ireq = InstallRequirement.from_editable(
+            "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
+        )
+        ireq.populate_link(finder, False, False)
+        ireq.ensure_has_source_dir(kwargs["src_dir"])
+        # Ensure the remote artifact is downloaded locally. For wheels, it is
+        # enough to just download because we'll use them directly. For an sdist,
+        # we need to unpack so we can build it.
+        unpack_kwargs = {
+            "session": session,
+            "hashes": ireq.hashes(True),
+            "link": ireq.link,
+            "location": ireq.source_dir,
+            "download_dir": kwargs["download_dir"],
+        }
+        if parse_version(pip_version) < parse_version("19.2.0"):
+            unpack_kwargs["only_download"] = ireq.is_wheel
+        if parse_version(pip_version) >= parse_version("10"):
+            unpack_kwargs["progress_bar"] = "off"
+        if not is_file_url(ireq.link):
+            shim_unpack(**unpack_kwargs)
+        output_file = None
+        ireq.is_direct = True
+        build_wheel_kwargs = {
+            "finder": finder,
+            "req": ireq,
+            "output_dir": output_dir.strpath,
+            "session": session,
+            "build_dir": build_dir,
+            "src_dir": source_dir,
+            "download_dir": download_dir,
+            "wheel_download_dir": wheel_download_dir,
+            "wheel_cache": wheel_cache,
+        }
+        if parse_version(pip_version) < parse_version("10"):
+            kwargs["session"] = session
+            reqset = RequirementSet(**kwargs)
+            build_wheel_kwargs["reqset"] = reqset
+            # XXX: We can skip all of the intervening steps and go straight to the
+            # wheel generation bit
+            ireq.is_direct = True
+            builder = WheelBuilder(reqset, finder)
+            output_file = builder._build_one(ireq, output_dir.strpath)
+        else:
+
+            kwargs.update(
+                {"progress_bar": "off", "build_isolation": False,}
+            )
+            if parse_version(pip_version) > parse_version("19.99.99"):
+                downloader = Downloader(session=session, progress_bar="off")
+                kwargs.pop("progress_bar", None)
+                kwargs["downloader"] = downloader
+                kwargs.update(
+                    {"use_user_site": False, "require_hashes": False,}
+                )
+            wheel_cache = kwargs.pop("wheel_cache")
+            with get_requirement_tracker() as req_tracker:
+                if req_tracker:
+                    kwargs["req_tracker"] = req_tracker
+                preparer = RequirementPreparer(**kwargs)
+                builder_args = [preparer, wheel_cache]
+                if parse_version(pip_version) < parse_version("19.3"):
+                    builder_args = [finder] + builder_args
+                if parse_version(pip_version) < parse_version("19.3.9"):
+                    builder = WheelBuilder(*builder_args)
+                    output_file = builder._build_one(ireq, output_dir.strpath)
+                else:
+                    output_file = build_one(ireq, output_dir.strpath, [], [])
     # XXX: skipping to here is functionally the same and should pass all tests
     # output_file = build_wheel(**build_wheel_kwargs)
     assert output_file, output_file
@@ -612,3 +620,9 @@ def test_stdlib_pkgs():
     from pip_shims.shims import stdlib_pkgs
 
     assert "argparse" in stdlib_pkgs
+
+
+def test_get_session():
+    cmd = InstallCommand()
+    sess = get_session(install_cmd=cmd)
+    assert type(sess).__base__.__name__ == "Session"

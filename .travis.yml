@@ -1,16 +1,17 @@
 language: python
 sudo: false
 cache: pip
-dist: trusty
+dist: bionic
 
 
 matrix:
   fast_finish: true
   allow_failures:
   - python: "3.4"
+    python: "3.5"
 
 install:
-  - "python -m pip install ${PIP}"
+  - "python -m pip install ${PIP} setuptools wheel"
   - "python -m pip install pytest pytest-xdist pytest-cov pytest-timeout"
   - "python -m pip install -e .[tests]"
 script:
@@ -18,18 +19,58 @@ script:
 
 jobs:
   include:
-    - &test-pip19
+		- &test-pip20
+      stage: test-pip20
+      python: "3.6"
+      env: PIP="pip==20.0.2"
+    - <<: *test-pip20
+      python: "3.8"
+     - <<: *test-pip20
+      python: "3.7"
+    - <<: *test-pip20
+      python: "3.5"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip20
+      python: "3.4"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip20
+      python: "2.7"
+    - &test-pip193
+      stage: test-pip193
+      python: "3.6"
+      env: PIP="pip==19.3.1"
+    - <<: *test-pip193
+      python: "3.8"
+     - <<: *test-pip193
+      python: "3.7"
+    - <<: *test-pip193
+      python: "3.5"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip193
+      python: "3.4"
+      dist: xenial
+      sudo: required
+    - <<: *test-pip193
+      python: "2.7"
+		- &test-pip19
       stage: test-pip19
       python: "3.6"
       env: PIP="pip==19.0.3"
     - <<: *test-pip19
+      python: "3.8"
+     - <<: *test-pip19
       python: "3.7"
+    - <<: *test-pip19
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pip19
-      python: "3.5"
-    - <<: *test-pip19
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pip19
       python: "2.7"
     - &test-pip181
@@ -38,12 +79,14 @@ jobs:
       env: PIP="pip==18.1"
     - <<: *test-pip181
       python: "3.7"
+    - <<: *test-pip181
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pip181
-      python: "3.5"
-    - <<: *test-pip181
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pip181
       python: "2.7"
     - &test-pipmaster
@@ -56,12 +99,14 @@ jobs:
         - "python -m pip install -e .[tests] --no-use-pep517"
     - <<: *test-pipmaster
       python: "3.7"
+    - <<: *test-pipmaster
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pipmaster
-      python: "3.5"
-    - <<: *test-pipmaster
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pipmaster
       python: "2.7"
     - &test-pip9
@@ -70,12 +115,14 @@ jobs:
       env: PIP="pip==9.0.3"
     - <<: *test-pip9
       python: "3.7"
+    - <<: *test-pip9
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pip9
-      python: "3.5"
-    - <<: *test-pip9
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pip9
       python: "2.7"
     - &test-pip10
@@ -84,12 +131,14 @@ jobs:
       env: PIP="pip==10.0.1"
     - <<: *test-pip10
       python: "3.7"
+    - <<: *test-pip10
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pip10
-      python: "3.5"
-    - <<: *test-pip10
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pip10
       python: "2.7"
     - &test-pip180
@@ -98,12 +147,14 @@ jobs:
       env: PIP="pip==18.0"
     - <<: *test-pip180
       python: "3.7"
+    - <<: *test-pip180
+      python: "3.5"
       dist: xenial
       sudo: required
     - <<: *test-pip180
-      python: "3.5"
-    - <<: *test-pip180
       python: "3.4"
+      dist: xenial
+      sudo: required
     - <<: *test-pip180
       python: "2.7"
     - stage: packaging

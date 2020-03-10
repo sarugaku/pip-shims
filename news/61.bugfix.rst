@@ -1,0 +1,1 @@
+Updated ``Resolver`` import path to point at new location (``legacy_resolve`` -> ``resolution.legacy.resolver``).

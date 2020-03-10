@@ -2,7 +2,7 @@
 """
 Backports and helper functionality to support using new functionality.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import atexit
 import contextlib
@@ -350,6 +350,27 @@ def ensure_resolution_dirs(**kwargs):
             yield kwargs
 
 
+@contextlib.contextmanager
+def wheel_cache(
+    wheel_cache_provider,  # type: TShimmedFunc
+    tempdir_manager_provider,  # type: TShimmedFunc
+    cache_dir,  # type: str
+    format_control=None,  # type: Any
+    format_control_provider=None,  # type: Optional[TShimmedFunc]
+):
+    tempdir_manager_provider = resolve_possible_shim(tempdir_manager_provider)
+    wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
+    format_control_provider = resolve_possible_shim(format_control_provider)
+    if not format_control and not format_control_provider:
+        raise TypeError("Format control or provider needed for wheel cache!")
+    if not format_control:
+        format_control = format_control_provider(None, None)
+    with ExitStack() as ctx:
+        ctx.enter_context(tempdir_manager_provider())
+        wheel_cache = wheel_cache_provider(cache_dir, format_control)
+        yield wheel_cache
+
+
 def partial_command(shimmed_path, cmd_mapping=None):
     # type: (Type, Optional[TShimmedCmdDict]) -> Union[Type[TCommandInstance], functools.partial]
     """
@@ -412,7 +433,7 @@ def get_session(
         assert isinstance(install_cmd_provider, (type, functools.partial))
         install_cmd = install_cmd_provider()
     if options is None:
-        options = install_cmd.parser.parse_args([])  # type: ignore
+        options, _ = install_cmd.parser.parse_args([])  # type: ignore
     session = install_cmd._build_session(options)  # type: ignore
     assert session is not None
     atexit.register(session.close)
@@ -1022,7 +1043,7 @@ def get_resolver(
         assert isinstance(install_cmd_provider, (type, functools.partial))
         install_cmd = install_cmd_provider()
     if options is None and install_cmd is not None:
-        options = install_cmd.parser.parse_args([])  # type: ignore
+        options, _ = install_cmd.parser.parse_args([])  # type: ignore
     for arg, val in install_cmd_dependency_map.items():
         if arg not in required_args:
             continue
@@ -1072,7 +1093,7 @@ def get_resolver(
     return resolver_fn(**resolver_kwargs)  # type: ignore
 
 
-def resolve(
+def resolve(  # noqa:C901
     ireq,  # type: TInstallRequirement
     reqset_provider=None,  # type: Optional[TShimmedFunc]
     req_tracker_provider=None,  # type: Optional[TShimmedFunc]
@@ -1102,6 +1123,7 @@ def resolve(
     wheel_download_dir=None,  # type: Optional[str]
     wheel_cache=None,  # type: Optional[TWheelCache]
     require_hashes=None,  # type: bool
+    check_supported_wheels=True,  # type: bool
 ):
     # (...) -> Set[TInstallRequirement]
     """
@@ -1163,6 +1185,8 @@ def resolve(
     :param Optional[TWheelCache] wheel_cache: The wheel cache to use, defaults to None
     :param bool require_hashes: Whether to require hashes when resolving. Defaults to
         False.
+    :param bool check_supported_wheels: Whether to check support of wheels before including
+        them in resolution.
     :return: A dictionary mapping requirements to corresponding
         :class:`~pip._internal.req.req_install.InstallRequirement`s
     :rtype: :class:`~pip._internal.req.req_install.InstallRequirement`
@@ -1239,7 +1263,9 @@ def resolve(
             kwargs["cache_dir"], format_control
         )  # type: ignore
         ireq.is_direct = True  # type: ignore
-        ireq.build_location(kwargs["build_dir"])  # type: ignore
+        build_location_kwargs = {"build_dir": kwargs["build_dir"], "autodelete": True}
+        call_function_with_correct_args(ireq.build_location, **build_location_kwargs)
+        # ireq.build_location(kwargs["build_dir"])  # type: ignore
         if reqset_provider is None:
             raise TypeError(
                 "cannot resolve without a requirement set provider... failed!"
@@ -1292,11 +1318,23 @@ def resolve(
             wheel_cache=wheel_cache,
             **resolver_args
         )  # type: ignore
-        reqset.add_requirement(ireq)
         resolver.require_hashes = kwargs.get("require_hashes", False)  # type: ignore
-        resolver.resolve(reqset)  # type: ignore
-        results = reqset.requirements
-        reqset.cleanup_files()
+        _, required_resolver_args = get_method_args(resolver.resolve)
+        resolver_args = []
+        if "requirement_set" in required_resolver_args.args:
+            reqset.add_requirement(ireq)
+            resolver_args.append(reqset)
+        elif "root_reqs" in required_resolver_args.args:
+            resolver_args.append([ireq])
+        if "check_supported_wheels" in required_resolver_args.args:
+            resolver_args.append(check_supported_wheels)
+        result_reqset = resolver.resolve(*resolver_args)  # type: ignore
+        if result_reqset is None:
+            result_reqset = reqset
+        results = result_reqset.requirements
+        cleanup_fn = getattr(reqset, "cleanup_files", None)
+        if cleanup_fn is not None:
+            cleanup_fn()
         return results
 
 

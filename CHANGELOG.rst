@@ -1,3 +1,24 @@
+0.5.1 (2020-03-10)
+==================
+
+Bug Fixes
+---------
+
+- Fixed incorrect session creation via ``pip_shims.compat.get_session`` which inadvertently passed a tuple to pip when building a session instance.  `#56 <https://github.com/sarugaku/pip-shims/issues/56>`_
+  
+- Added ``wheel_cache`` context manager helper for managing global context when creating wheel wheel_cache instances.  `#58 <https://github.com/sarugaku/pip-shims/issues/58>`_
+  
+- Fixed resolution failures due to ``Resolver.resolve`` signature updates in ``pip@master``:
+    - Automatically check for and pass ``check_supports_wheel`` argument to `Resolver.resolve()` when expected
+    - Check whether ``Resolver.resolve()`` expects a ``RequirementSet`` or ``List[InstallRequirement]`` and pass the appropriate input  `#59 <https://github.com/sarugaku/pip-shims/issues/59>`_
+  
+- Fixed requirement build failures due to new ``autodelete: bool`` required argument in ``InstallRequirement.ensure_build_location``.  `#60 <https://github.com/sarugaku/pip-shims/issues/60>`_
+  
+- Updated ``Resolver`` import path to point at new location (``legacy_resolve`` -> ``resolution.legacy.resolver``).  `#61 <https://github.com/sarugaku/pip-shims/issues/61>`_
+  
+- Fixed ``AttributeError`` caused by failed ``RequirementSet.cleanup()`` calls after ``Resolver.resolve()`` which is no longer valid in ``pip>=20.1``.  `#62 <https://github.com/sarugaku/pip-shims/issues/62>`_
+
+
 0.5.0 (2020-01-28)
 ==================
 

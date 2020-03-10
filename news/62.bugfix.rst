@@ -1,1 +1,0 @@
-Fixed ``AttributeError`` caused by failed ``RequirementSet.cleanup()`` calls after ``Resolver.resolve()`` which is no longer valid in ``pip>=20.1``.

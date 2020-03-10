@@ -1,1 +1,0 @@
-Fixed requirement build failures due to new ``autodelete: bool`` required argument in ``InstallRequirement.ensure_build_location``.

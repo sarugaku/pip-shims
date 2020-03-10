@@ -1,3 +1,0 @@
-Fixed resolution failures due to ``Resolver.resolve`` signature updates in ``pip@master``:
-  - Automatically check for and pass ``check_supports_wheel`` argument to `Resolver.resolve()` when expected
-  - Check whether ``Resolver.resolve()`` expects a ``RequirementSet`` or ``List[InstallRequirement]`` and pass the appropriate input

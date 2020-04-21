@@ -1,5 +1,5 @@
 # -*- coding=utf-8 -*-
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -71,6 +71,7 @@ from pip_shims import (
     resolve,
     shim_unpack,
     url_to_path,
+    wheel_cache,
 )
 from pip_shims.compat import get_session
 
@@ -304,80 +305,92 @@ def test_resolution(tmpdir, PipCommand):
     wheel_download_dir = CACHE_DIR.mkdir("wheels")
     pkg_download_dir = CACHE_DIR.mkdir("pkgs")
     results = None
-    if parse_version(pip_version) < parse_version("10.0"):
-        wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
-        reqset = RequirementSet(
-            build_dir.strpath,
-            source_dir.strpath,
-            download_dir=download_dir.strpath,
-            wheel_download_dir=wheel_download_dir.strpath,
-            session=session,
-            wheel_cache=wheel_cache,
-        )
-        results = reqset._prepare_file(finder, ireq)
-    else:
-        preparer_kwargs = {
-            "build_dir": build_dir.strpath,
-            "src_dir": source_dir.strpath,
-            "download_dir": download_dir.strpath,
-            "wheel_download_dir": wheel_download_dir.strpath,
-            "progress_bar": "off",
-            "build_isolation": False,
-        }
-        resolver_kwargs = {
-            "finder": finder,
-            "upgrade_strategy": "to-satisfy-only",
-            "force_reinstall": False,
-            "ignore_dependencies": False,
-            "ignore_requires_python": False,
-            "ignore_installed": True,
-            "use_user_site": False,
-        }
-        if parse_version(pip_version) > parse_version("19.99.99"):
-            downloader = Downloader(session=session, progress_bar="off")
-            preparer_kwargs.pop("progress_bar", None)
-            preparer_kwargs.update(
-                {
-                    "finder": finder,
-                    "require_hashes": False,
-                    "use_user_site": False,
-                    "downloader": downloader,
-                }
+    with wheel_cache(USER_CACHE_DIR, FormatControl(None, None)) as wheelcache:
+        if parse_version(pip_version) < parse_version("10.0"):
+            reqset = RequirementSet(
+                build_dir.strpath,
+                source_dir.strpath,
+                download_dir=download_dir.strpath,
+                wheel_download_dir=wheel_download_dir.strpath,
+                session=session,
+                wheel_cache=wheelcache,
             )
+            results = reqset._prepare_file(finder, ireq)
         else:
-            resolver_kwargs["session"] = session
-        with global_tempdir_manager():
-            wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
-            if parse_version(pip_version) >= parse_version("19.3"):
+            preparer_kwargs = {
+                "build_dir": build_dir.strpath,
+                "src_dir": source_dir.strpath,
+                "download_dir": download_dir.strpath,
+                "wheel_download_dir": wheel_download_dir.strpath,
+                "progress_bar": "off",
+                "build_isolation": False,
+            }
+            resolver_kwargs = {
+                "finder": finder,
+                "upgrade_strategy": "to-satisfy-only",
+                "force_reinstall": False,
+                "ignore_dependencies": False,
+                "ignore_requires_python": False,
+                "ignore_installed": True,
+                "use_user_site": False,
+            }
+            if parse_version(pip_version) > parse_version("19.99.99"):
+                downloader = Downloader(session=session, progress_bar="off")
+                preparer_kwargs.pop("progress_bar", None)
+                preparer_kwargs.update(
+                    {
+                        "finder": finder,
+                        "require_hashes": False,
+                        "use_user_site": False,
+                        "downloader": downloader,
+                    }
+                )
+                resolver_kwargs["py_version_info"] = sys.version_info[:3]
+            else:
+                resolver_kwargs["session"] = session
+            if (
+                parse_version("19.3")
+                <= parse_version(pip_version)
+                <= parse_version("20.0.99999")
+            ):
                 make_install_req = partial(
                     install_req_from_req_string,
                     isolated=False,
-                    wheel_cache=wheel_cache,
+                    wheel_cache=wheelcache,
                     # use_pep517=use_pep517,
                 )
                 resolver_kwargs["make_install_req"] = make_install_req
             else:
-                resolver_kwargs.update({"isolated": False, "wheel_cache": wheel_cache})
-        resolver = None
-        preparer = None
-        with global_tempdir_manager(), get_requirement_tracker() as req_tracker:
-            # Pip 18 uses a requirement tracker to prevent fork bombs
-            if req_tracker:
-                preparer_kwargs["req_tracker"] = req_tracker
-            if parse_version(pip_version) >= parse_version("19.3.9"):
-                preparer_kwargs.pop("session", None)
-            preparer = RequirementPreparer(**preparer_kwargs)
-            resolver_kwargs["preparer"] = preparer
-            reqset = RequirementSet()
-            ireq.is_direct = True
-            reqset.add_requirement(ireq)
-            resolver = Resolver(**resolver_kwargs)
-            resolver.require_hashes = False
-            results = resolver._resolve_one(reqset, ireq)
-            try:
-                reqset.cleanup_files()
-            except AttributeError:
-                pass
+                resolver_kwargs["wheel_cache"] = wheelcache
+                if parse_version(pip_version) >= parse_version("20.1"):
+                    make_install_req = partial(
+                        install_req_from_req_string, isolated=False, use_pep517=True,
+                    )
+                    resolver_kwargs["make_install_req"] = make_install_req
+                else:
+                    resolver_kwargs["isolated"] = False
+            resolver = None
+            preparer = None
+            with get_requirement_tracker() as req_tracker:
+                # Pip 18 uses a requirement tracker to prevent fork bombs
+                if req_tracker:
+                    preparer_kwargs["req_tracker"] = req_tracker
+                if parse_version(pip_version) >= parse_version("19.3.9"):
+                    preparer_kwargs.pop("session", None)
+                preparer = RequirementPreparer(**preparer_kwargs)
+                resolver_kwargs["preparer"] = preparer
+                reqset = RequirementSet()
+                ireq.is_direct = True
+                reqset.add_requirement(ireq)
+                resolver = Resolver(**resolver_kwargs)
+                resolver.require_hashes = False
+                if parse_version(pip_version) > parse_version("20.0.9999999"):
+                    resolver._populate_link(ireq)
+                results = resolver._resolve_one(reqset, ireq)
+                try:
+                    reqset.cleanup_files()
+                except AttributeError:
+                    pass
     results = set(results)
     result_names = [r.name for r in results]
     assert "chardet" in result_names
@@ -406,8 +419,7 @@ def test_frozen_req():
 
 def test_wheel_cache():
     fc = FormatControl(None, None)
-    with global_tempdir_manager():
-        w = WheelCache(USER_CACHE_DIR, fc)
+    with wheel_cache(USER_CACHE_DIR, fc) as w:
         assert w.__class__.__name__ == "WheelCache"
 
 
@@ -487,14 +499,13 @@ def test_wheelbuilder(tmpdir, PipCommand):
     source_dir = tmpdir.mkdir("source_dir")
     download_dir = tmpdir.mkdir("download_dir")
     wheel_download_dir = CACHE_DIR.mkdir("wheels")
-    with global_tempdir_manager():
-        wheel_cache = WheelCache(USER_CACHE_DIR, FormatControl(None, None))
+    with wheel_cache(USER_CACHE_DIR, FormatControl(None, None)) as wheelcache:
         kwargs = {
             "build_dir": build_dir.strpath,
             "src_dir": source_dir.strpath,
             "download_dir": download_dir.strpath,
             "wheel_download_dir": wheel_download_dir.strpath,
-            "wheel_cache": wheel_cache,
+            "wheel_cache": wheelcache,
         }
         if parse_version(pip_version) > parse_version("19.99.99"):
             kwargs.update(
@@ -503,7 +514,8 @@ def test_wheelbuilder(tmpdir, PipCommand):
         ireq = InstallRequirement.from_editable(
             "git+https://github.com/urllib3/urllib3@1.23#egg=urllib3"
         )
-        ireq.populate_link(finder, False, False)
+        if parse_version(pip_version) <= parse_version("20.0.9999999"):
+            ireq.populate_link(finder, False, False)
         ireq.ensure_has_source_dir(kwargs["src_dir"])
         # Ensure the remote artifact is downloaded locally. For wheels, it is
         # enough to just download because we'll use them directly. For an sdist,
@@ -532,7 +544,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
             "src_dir": source_dir,
             "download_dir": download_dir,
             "wheel_download_dir": wheel_download_dir,
-            "wheel_cache": wheel_cache,
+            "wheel_cache": wheelcache,
         }
         if parse_version(pip_version) < parse_version("10"):
             kwargs["session"] = session
@@ -555,12 +567,12 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 kwargs.update(
                     {"use_user_site": False, "require_hashes": False,}
                 )
-            wheel_cache = kwargs.pop("wheel_cache")
+            wheelcache = kwargs.pop("wheel_cache")
             with get_requirement_tracker() as req_tracker:
                 if req_tracker:
                     kwargs["req_tracker"] = req_tracker
                 preparer = RequirementPreparer(**kwargs)
-                builder_args = [preparer, wheel_cache]
+                builder_args = [preparer, wheelcache]
                 if parse_version(pip_version) < parse_version("19.3"):
                     builder_args = [finder] + builder_args
                 if parse_version(pip_version) < parse_version("19.3.9"):

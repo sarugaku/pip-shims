@@ -921,13 +921,6 @@ unpack_url = ShimmedPathCollection("unpack_url", ImportTypes.FUNCTION)
 unpack_url.create_path("download.unpack_url", "7.0.0", "19.3.9")
 unpack_url.create_path("operations.prepare.unpack_url", "20.0", "9999")
 
-shim_unpack = ShimmedPathCollection("shim_unpack", ImportTypes.FUNCTION)
-shim_unpack.set_default(
-    functools.partial(
-        compat.shim_unpack, unpack_fn=unpack_url, downloader_provider=Downloader
-    )
-)
-
 is_installable_dir = ShimmedPathCollection("is_installable_dir", ImportTypes.FUNCTION)
 is_installable_dir.create_path("utils.misc.is_installable_dir", "10.0.0", "9999")
 is_installable_dir.create_path("utils.is_installable_dir", "7.0.0", "9.0.3")
@@ -1036,6 +1029,16 @@ global_tempdir_manager.create_path(
     "utils.temp_dir.global_tempdir_manager", "7.0.0", "9999"
 )
 
+shim_unpack = ShimmedPathCollection("shim_unpack", ImportTypes.FUNCTION)
+shim_unpack.set_default(
+    functools.partial(
+        compat.shim_unpack,
+        unpack_fn=unpack_url,
+        downloader_provider=Downloader,
+        tempdir_manager_provider=global_tempdir_manager,
+    )
+)
+
 get_requirement_tracker = ShimmedPathCollection(
     "get_requirement_tracker", ImportTypes.CONTEXTMANAGER
 )
@@ -1128,6 +1131,17 @@ DEV_PKGS.create_path("commands.freeze.DEV_PKGS", "9.0.0", "9999")
 DEV_PKGS.set_default({"setuptools", "pip", "distribute", "wheel"})
 
 
+wheel_cache = ShimmedPathCollection("wheel_cache", ImportTypes.FUNCTION)
+wheel_cache.set_default(
+    functools.partial(
+        compat.wheel_cache,
+        wheel_cache_provider=WheelCache,
+        tempdir_manager_provider=global_tempdir_manager,
+        format_control_provider=FormatControl,
+    )
+)
+
+
 get_package_finder = ShimmedPathCollection("get_package_finder", ImportTypes.FUNCTION)
 get_package_finder.set_default(
     functools.partial(
@@ -1158,7 +1172,7 @@ get_resolver.set_default(
         install_cmd_provider=InstallCommand,
         resolver_fn=Resolver,
         install_req_provider=install_req_from_req_string,
-        wheel_cache_provider=WheelCache,
+        wheel_cache_provider=wheel_cache,
         format_control_provider=FormatControl,
     )
 )
@@ -1170,6 +1184,7 @@ get_requirement_set.set_default(
         compat.get_requirement_set,
         install_cmd_provider=InstallCommand,
         req_set_provider=RequirementSet,
+        wheel_cache_provider=wheel_cache,
     )
 )
 
@@ -1182,7 +1197,7 @@ resolve.set_default(
         reqset_provider=get_requirement_set,
         finder_provider=get_package_finder,
         resolver_provider=get_resolver,
-        wheel_cache_provider=WheelCache,
+        wheel_cache_provider=wheel_cache,
         format_control_provider=FormatControl,
         make_preparer_provider=make_preparer,
         req_tracker_provider=get_requirement_tracker,
@@ -1196,7 +1211,7 @@ build_wheel.set_default(
     functools.partial(
         compat.build_wheel,
         install_command_provider=InstallCommand,
-        wheel_cache_provider=WheelCache,
+        wheel_cache_provider=wheel_cache,
         wheel_builder_provider=WheelBuilder,
         build_one_provider=build_one,
         build_one_inside_env_provider=build_one_inside_env,

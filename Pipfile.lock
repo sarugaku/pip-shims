@@ -192,6 +192,7 @@
                 "sha256:e8932bddf159064f04e946fbb64693753488de21586f20e840b3be51745c8c09",
                 "sha256:f20900f16377f2109783ae9348d34bc80530808439591c3d3df73d5c7ef1a00c"
             ],
+            "markers": "os_name != 'nt'",
             "version": "==0.4.2"
         },
         "colorama": {
@@ -673,6 +674,14 @@
                 "sha256:95ca727d4a1dace6ec5f0534d2940b8417ff8b782f7eef0ea09240bdd94d95c2"
             ],
             "version": "==1.3.4"
+        },
+        "pywin32-ctypes": {
+            "hashes": [
+                "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942",
+                "sha256:9dc2d991b3479cc2df15930958b674a48a227d5361d413827a4cfd0b5876fc98"
+            ],
+            "markers": "sys_platform == 'win32'",
+            "version": "==0.2.0"
         },
         "pytest-xdist": {
             "hashes": [

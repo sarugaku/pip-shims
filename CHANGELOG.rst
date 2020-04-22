@@ -1,3 +1,16 @@
+0.5.2 (2020-04-22)
+==================
+
+Features
+--------
+
+- Added support for ``pip==20.1``.
+  - Added support for global temporary directory context management when generating wheel caches using the compatibility module;
+  - Added wheel cache context management which now requires the temporary directory context in some cases;
+  - Improved function argument introspection;
+  - Updated test invocations to reflect shifting parameters.  `#65 <https://github.com/sarugaku/pip-shims/issues/65>`_
+
+
 0.5.1 (2020-03-10)
 ==================
 

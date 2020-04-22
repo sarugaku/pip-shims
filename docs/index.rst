@@ -6,21 +6,22 @@
 Welcome to pip_shims's documentation!
 =====================================
 
+.. toctree::
+   :maxdepth: 4
+
+   quickstart
+   pip_shims
+   ../CHANGELOG
+
 .. autosummary::
    :toctree: generated
 
    pip_shims
    pip_shims.shims
    pip_shims.models
-   pip_shims.backports
+   pip_shims.compat
    pip_shims.environment
    pip_shims.utils
-
-.. toctree::
-   :maxdepth: 4
-
-   quickstart
-   ../CHANGELOG
 
 
 Indices and tables

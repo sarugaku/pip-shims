@@ -19,6 +19,7 @@ from packaging import specifiers
 from .environment import MYPY_RUNNING
 from .utils import (
     call_function_with_correct_args,
+    filter_allowed_args,
     get_method_args,
     nullcontext,
     suppress_setattr,
@@ -65,6 +66,7 @@ if MYPY_RUNNING:
     TCommandInstance = TypeVar("TCommandInstance")
     TCmdDict = Dict[str, Union[Tuple[str, str, str], TCommandInstance]]
     TInstallRequirement = TypeVar("TInstallRequirement")
+    TFormatControl = TypeVar("TFormatControl")
     TShimmedCmdDict = Union[TShim, TCmdDict]
     TWheelCache = TypeVar("TWheelCache")
     TPreparer = TypeVar("TPreparer")
@@ -352,11 +354,11 @@ def ensure_resolution_dirs(**kwargs):
 
 @contextlib.contextmanager
 def wheel_cache(
-    wheel_cache_provider,  # type: TShimmedFunc
-    tempdir_manager_provider,  # type: TShimmedFunc
-    cache_dir,  # type: str
+    cache_dir=None,  # type: str
     format_control=None,  # type: Any
+    wheel_cache_provider=None,  # type: TShimmedFunc
     format_control_provider=None,  # type: Optional[TShimmedFunc]
+    tempdir_manager_provider=None,  # type: TShimmedFunc
 ):
     tempdir_manager_provider = resolve_possible_shim(tempdir_manager_provider)
     wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
@@ -490,6 +492,7 @@ def get_requirement_set(
     cache_dir=None,  # type: Optional[str]
     options=None,  # type: Optional[Values]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
+    wheel_cache_provider=None,  # type: Optional[TShimmedFunc]
 ):
     # (...) -> TRequirementSet
     """
@@ -499,6 +502,8 @@ def get_requirement_set(
     invalid parameters will be ignored if they are not needed to generate a
     requirement set on the current pip version.
 
+    :param :class:`~pip_shims.models.ShimmedPathCollection` wheel_cache_provider: A
+        context manager provider which resolves to a `WheelCache` instance
     :param install_command: A :class:`~pip._internal.commands.install.InstallCommand`
         instance which is used to generate the finder.
     :param :class:`~pip_shims.models.ShimmedPathCollection` req_set_provider: A provider
@@ -538,6 +543,7 @@ def get_requirement_set(
     :return: A new requirement set instance
     :rtype: :class:`~pip._internal.req.req_set.RequirementSet`
     """
+    wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
     req_set_provider = resolve_possible_shim(req_set_provider)
     if install_command is None:
         install_cmd_provider = resolve_possible_shim(install_cmd_provider)
@@ -565,10 +571,13 @@ def get_requirement_set(
     )
     if session is None and "session" in required_args:
         session = get_session(install_cmd=install_command, options=options)
-    results["wheel_cache"] = wheel_cache
-    results["session"] = session
-    results["wheel_download_dir"] = wheel_download_dir
-    return call_function_with_correct_args(req_set_provider, **results)
+    with ExitStack() as stack:
+        if wheel_cache is None:
+            wheel_cache = stack.enter_context(wheel_cache_provider(cache_dir=cache_dir))
+        results["wheel_cache"] = wheel_cache
+        results["session"] = session
+        results["wheel_download_dir"] = wheel_download_dir
+        return call_function_with_correct_args(req_set_provider, **results)
 
 
 def get_package_finder(
@@ -689,6 +698,7 @@ def get_package_finder(
 def shim_unpack(
     unpack_fn,  # type: TShimmedFunc
     download_dir,  # type str
+    tempdir_manager_provider,  # type: TShimmedFunc
     ireq=None,  # type: Optional[Any]
     link=None,  # type: Optional[Any]
     location=None,  # type Optional[str],
@@ -708,6 +718,8 @@ def shim_unpack(
     :param unpack_fn: A callable or shim referring to the pip implementation
     :type unpack_fn: Callable
     :param str download_dir: The directory to download the file to
+    :param TShimmedFunc tempdir_manager_provider: A callable or shim referring to
+        `global_tempdir_manager` function from pip or a shimmed no-op context manager
     :param Optional[:class:`~pip._internal.req.req_install.InstallRequirement`] ireq:
         an Install Requirement instance, defaults to None
     :param Optional[:class:`~pip._internal.models.link.Link`] link: A Link instance,
@@ -727,31 +739,33 @@ def shim_unpack(
     """
     unpack_fn = resolve_possible_shim(unpack_fn)
     downloader_provider = resolve_possible_shim(downloader_provider)
+    tempdir_manager_provider = resolve_possible_shim(tempdir_manager_provider)
     required_args = inspect.getargs(unpack_fn.__code__).args  # type: ignore
     unpack_kwargs = {"download_dir": download_dir}
-    if ireq:
-        if not link and ireq.link:
-            link = ireq.link
-        if only_download is None:
-            only_download = ireq.is_wheel
-        if hashes is None:
-            hashes = ireq.hashes(True)
-        if location is None and getattr(ireq, "source_dir", None):
-            location = ireq.source_dir
-    unpack_kwargs.update({"link": link, "location": location})
-    if hashes is not None and "hashes" in required_args:
-        unpack_kwargs["hashes"] = hashes
-    if "progress_bar" in required_args:
-        unpack_kwargs["progress_bar"] = progress_bar
-    if only_download is not None and "only_download" in required_args:
-        unpack_kwargs["only_download"] = only_download
-    if session is not None and "session" in required_args:
-        unpack_kwargs["session"] = session
-    if "downloader" in required_args and downloader_provider is not None:
-        assert session is not None
-        assert progress_bar is not None
-        unpack_kwargs["downloader"] = downloader_provider(session, progress_bar)
-    return unpack_fn(**unpack_kwargs)  # type: ignore
+    with tempdir_manager_provider():
+        if ireq:
+            if not link and ireq.link:
+                link = ireq.link
+            if only_download is None:
+                only_download = ireq.is_wheel
+            if hashes is None:
+                hashes = ireq.hashes(True)
+            if location is None and getattr(ireq, "source_dir", None):
+                location = ireq.source_dir
+        unpack_kwargs.update({"link": link, "location": location})
+        if hashes is not None and "hashes" in required_args:
+            unpack_kwargs["hashes"] = hashes
+        if "progress_bar" in required_args:
+            unpack_kwargs["progress_bar"] = progress_bar
+        if only_download is not None and "only_download" in required_args:
+            unpack_kwargs["only_download"] = only_download
+        if session is not None and "session" in required_args:
+            unpack_kwargs["session"] = session
+        if "downloader" in required_args and downloader_provider is not None:
+            assert session is not None
+            assert progress_bar is not None
+            unpack_kwargs["downloader"] = downloader_provider(session, progress_bar)
+        return unpack_fn(**unpack_kwargs)  # type: ignore
 
 
 def _ensure_finder(
@@ -918,6 +932,31 @@ def make_preparer(
         yield result
 
 
+@contextlib.contextmanager
+def _ensure_wheel_cache(
+    wheel_cache=None,  # type: Optional[Type[TWheelCache]]
+    wheel_cache_provider=None,  # type: Optional[Callable]
+    format_control=None,  # type: Optional[TFormatControl]
+    format_control_provider=None,  # type: Optional[Type[TShimmedFunc]]
+    options=None,  # type: Optional[Values]
+    cache_dir=None,  # type: Optional[str]
+):
+    if wheel_cache is not None:
+        yield wheel_cache
+    elif wheel_cache_provider is not None:
+        with ExitStack() as stack:
+            cache_dir = getattr(options, "cache_dir", cache_dir)
+            format_control = getattr(
+                options,
+                "format_control",
+                format_control_provider(None, None),  # TFormatControl
+            )
+            wheel_cache = stack.enter_context(
+                wheel_cache_provider(cache_dir, format_control)
+            )
+            yield wheel_cache
+
+
 def get_resolver(
     resolver_fn,  # type: TShimmedFunc
     install_req_provider=None,  # type: Optional[TShimmedFunc]
@@ -938,6 +977,7 @@ def get_resolver(
     make_install_req=None,  # type: Optional[Callable]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
+    use_pep517=True,  # type: bool
 ):
     # (...) -> TResolver
     """
@@ -985,6 +1025,7 @@ def get_resolver(
         to the resolver for actually generating install requirements, if necessary
     :param Optional[TCommandInstance] install_cmd: The install command used to create
         the finder, session, and options if needed, defaults to None.
+    :param bool use_pep517: Whether to use the pep517 build process.
     :return: A new resolver instance.
     :rtype: :class:`~pip._internal.legacy_resolve.Resolver`
 
@@ -1059,26 +1100,21 @@ def get_resolver(
         resolver_kwargs[arg] = val
     if "make_install_req" in required_args:
         if make_install_req is None and install_req_provider is not None:
+            make_install_req_kwargs = {
+                "isolated": isolated,
+                "wheel_cache": wheel_cache,
+                "use_pep517": use_pep517,
+            }
+            factory_args, factory_kwargs = filter_allowed_args(
+                install_req_provider, **make_install_req_kwargs
+            )
             make_install_req = functools.partial(
-                install_req_provider,
-                isolated=isolated,
-                wheel_cache=wheel_cache,
-                # use_pep517=use_pep517,
+                install_req_provider, *factory_args, **factory_kwargs
             )
         assert make_install_req is not None
         resolver_kwargs["make_install_req"] = make_install_req
     if "isolated" in required_args:
         resolver_kwargs["isolated"] = isolated
-    if "wheel_cache" in required_args:
-        if wheel_cache is None and wheel_cache_provider is not None:
-            cache_dir = getattr(options, "cache_dir", None)
-            format_control = getattr(
-                options,
-                "format_control",
-                format_control_provider(None, None),  # type: ignore
-            )
-            wheel_cache = wheel_cache_provider(cache_dir, format_control)
-        resolver_kwargs["wheel_cache"] = wheel_cache
     resolver_kwargs.update(
         {
             "upgrade_strategy": upgrade_strategy,
@@ -1090,6 +1126,15 @@ def get_resolver(
             "preparer": preparer,
         }
     )
+    if "wheel_cache" in required_args:
+        with _ensure_wheel_cache(
+            wheel_cache=wheel_cache,
+            wheel_cache_provider=wheel_cache_provider,
+            format_control_provider=format_control_provider,
+            options=options,
+        ) as wheel_cache:
+            resolver_kwargs["wheel_cache"] = wheel_cache
+            return resolver_fn(**resolver_kwargs)  # type: ignore
     return resolver_fn(**resolver_kwargs)  # type: ignore
 
 
@@ -1259,8 +1304,8 @@ def resolve(  # noqa:C901
         format_control = getattr(options, "format_control", None)
         if not format_control:
             format_control = format_control_provider(None, None)  # type: ignore
-        wheel_cache = wheel_cache_provider(
-            kwargs["cache_dir"], format_control
+        wheel_cache = ctx.enter_context(
+            wheel_cache_provider(kwargs["cache_dir"], format_control)
         )  # type: ignore
         ireq.is_direct = True  # type: ignore
         build_location_kwargs = {"build_dir": kwargs["build_dir"], "autodelete": True}
@@ -1447,25 +1492,27 @@ def build_wheel(
     }
     if not req and not reqset:
         raise TypeError("Must provide either a requirement or requirement set to build")
-    if wheel_cache is None and (reqset is not None or output_dir is None):
-        if install_command is None:
-            assert isinstance(install_cmd_provider, (type, functools.partial))
-            install_command = install_cmd_provider()
-        kwargs, options = populate_options(install_command, options, **kwarg_map)
-        format_control = getattr(options, "format_control", None)
-        if not format_control:
-            format_control = format_control_provider(None, None)  # type: ignore
-        wheel_cache = wheel_cache_provider(options.cache_dir, format_control)
-    if req and not reqset and not output_dir:
-        output_dir = wheel_cache.get_path_for_link(req.link)
-    if not reqset and build_one_provider:
-        yield build_one_provider(req, output_dir, build_options, global_options)
-    elif build_many_provider:
-        yield build_many_provider(
-            reqset, wheel_cache, build_options, global_options, check_binary_allowed
-        )
-    else:
-        with ExitStack() as ctx:
+    with ExitStack() as ctx:
+        if wheel_cache is None and (reqset is not None or output_dir is None):
+            if install_command is None:
+                assert isinstance(install_cmd_provider, (type, functools.partial))
+                install_command = install_cmd_provider()
+            kwargs, options = populate_options(install_command, options, **kwarg_map)
+            format_control = getattr(options, "format_control", None)
+            if not format_control:
+                format_control = format_control_provider(None, None)  # type: ignore
+            wheel_cache = ctx.enter_context(
+                wheel_cache_provider(options.cache_dir, format_control)
+            )
+        if req and not reqset and not output_dir:
+            output_dir = wheel_cache.get_path_for_link(req.link)
+        if not reqset and build_one_provider:
+            yield build_one_provider(req, output_dir, build_options, global_options)
+        elif build_many_provider:
+            yield build_many_provider(
+                reqset, wheel_cache, build_options, global_options, check_binary_allowed
+            )
+        else:
             if session is None and finder is None:
                 session = get_session(install_cmd=install_command, options=options)
                 finder = finder_provider(

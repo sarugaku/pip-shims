@@ -162,8 +162,8 @@ def test_link_and_ireq():
 def test_path_and_url():
     path = "/path/to/file"
     prefix, _ = os.path.splitdrive(os.getcwd())
-    prefix = "/{0}".format(prefix) if prefix else ""
-    url = "file://{0}{1}".format(prefix, path)
+    prefix = "/{}".format(prefix) if prefix else ""
+    url = "file://{}{}".format(prefix, path)
     assert is_file_url(Link(url))
     assert path_to_url(path) == url
     assert url_to_path(url) == os.path.realpath(path)
@@ -278,7 +278,7 @@ def test_resolution(tmpdir, PipCommand):
             for c in requests_candidates
             if c.version
             in ireq.specifier.filter(
-                (candidate.version for candidate in requests_candidates)
+                candidate.version for candidate in requests_candidates
             )
         ],
         key=lambda c: c.version,
@@ -601,7 +601,7 @@ def test_get_packagefinder():
             for c in requests_candidates
             if c.version
             in ireq.specifier.filter(
-                (candidate.version for candidate in requests_candidates)
+                candidate.version for candidate in requests_candidates
             )
         ],
         key=lambda c: c.version,
@@ -641,7 +641,7 @@ def test_get_session():
 
 
 def test_build_wheel():
-    ireq = install_req_from_line(
+    ireq = InstallRequirement.from_line(
         "https://files.pythonhosted.org/packages/05/8c/40cd6949373e23081b3ea20d5594ae523e681b6f472e600fbc95ed046a36/urllib3-1.25.9.tar.gz#egg=urllib3"
     )
     with ensure_resolution_dirs() as kwargs:

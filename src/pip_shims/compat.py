@@ -20,6 +20,7 @@ from .environment import MYPY_RUNNING
 from .utils import (
     call_function_with_correct_args,
     filter_allowed_args,
+    get_allowed_args,
     get_method_args,
     nullcontext,
     suppress_setattr,
@@ -674,11 +675,11 @@ def get_package_finder(
     ):
         if target_python and not received_python:
             tags = target_python.get_tags()
-            version_impl = set([t[0] for t in tags])
+            version_impl = {t[0] for t in tags}
             # impls = set([v[:2] for v in version_impl])
             # impls.remove("py")
             # impl = next(iter(impls), "py") if not target_python
-            versions = set([v[2:] for v in version_impl])
+            versions = {v[2:] for v in version_impl}
             build_kwargs.update(
                 {
                     "platform": target_python.platform,
@@ -874,7 +875,7 @@ def make_preparer(
     preparer_fn = resolve_possible_shim(preparer_fn)
     downloader_provider = resolve_possible_shim(downloader_provider)
     finder_provider = resolve_possible_shim(finder_provider)
-    required_args = inspect.getargs(preparer_fn.__init__.__code__).args  # type: ignore
+    required_args, required_kwargs = get_allowed_args(preparer_fn)  # type: ignore
     if not req_tracker and not req_tracker_fn and "req_tracker" in required_args:
         raise TypeError("No requirement tracker and no req tracker generator found!")
     if "downloader" in required_args and not downloader_provider:
@@ -955,6 +956,13 @@ def _ensure_wheel_cache(
                 wheel_cache_provider(cache_dir, format_control)
             )
             yield wheel_cache
+
+
+def get_ireq_output_path(wheel_cache, ireq):
+    if getattr(wheel_cache, "get_path_for_link", None):
+        return wheel_cache.get_path_for_link(ireq.link)
+    elif getattr(wheel_cache, "cached_wheel", None):
+        return wheel_cache.cached_wheel(ireq.link, ireq.name).url_without_fragment
 
 
 def get_resolver(
@@ -1090,7 +1098,7 @@ def get_resolver(
             continue
         elif val is None and install_cmd is None:
             raise TypeError(
-                "Preparer requires a {0} but did not receive one "
+                "Preparer requires a {} but did not receive one "
                 "and cannot generate one".format(arg)
             )
         elif arg == "session" and val is None:
@@ -1300,7 +1308,9 @@ def resolve(  # noqa:C901
         if session is None:
             session = get_session(install_cmd=install_command, options=options)
         if finder is None:
-            finder = finder_provider(install_command, options=options, session=session)  # type: ignore
+            finder = finder_provider(
+                install_command, options=options, session=session
+            )  # type: ignore
         format_control = getattr(options, "format_control", None)
         if not format_control:
             format_control = format_control_provider(None, None)  # type: ignore
@@ -1310,12 +1320,17 @@ def resolve(  # noqa:C901
         ireq.is_direct = True  # type: ignore
         build_location_kwargs = {"build_dir": kwargs["build_dir"], "autodelete": True}
         call_function_with_correct_args(ireq.build_location, **build_location_kwargs)
-        # ireq.build_location(kwargs["build_dir"])  # type: ignore
         if reqset_provider is None:
             raise TypeError(
                 "cannot resolve without a requirement set provider... failed!"
             )
-        reqset = reqset_provider(install_command, options=options, session=session, wheel_download_dir=wheel_download_dir, **kwargs)  # type: ignore
+        reqset = reqset_provider(
+            install_command,
+            options=options,
+            session=session,
+            wheel_download_dir=wheel_download_dir,
+            **kwargs
+        )  # type: ignore
         if getattr(reqset, "prepare_files", None):
             reqset.add_requirement(ireq)
             results = reqset.prepare_files(finder)
@@ -1338,7 +1353,6 @@ def resolve(  # noqa:C901
             "use_user_site": use_user_site,
             "require_hashes": require_hashes,
         }
-        # with req_tracker_provider() as req_tracker:
         if isinstance(req_tracker_provider, (types.FunctionType, functools.partial)):
             preparer_args["req_tracker"] = ctx.enter_context(req_tracker_provider())
         resolver_keys = [
@@ -1383,7 +1397,7 @@ def resolve(  # noqa:C901
         return results
 
 
-def build_wheel(
+def build_wheel(  # noqa:C901
     req=None,  # type: Optional[TInstallRequirement]
     reqset=None,  # type: Optional[Union[TReqSet, Iterable[TInstallRequirement]]]
     output_dir=None,  # type: Optional[str]
@@ -1413,8 +1427,9 @@ def build_wheel(
     build_many_provider=None,  # type: Optional[TShimmedFunc]
     install_command_provider=None,  # type: Optional[TShimmedFunc]
     finder_provider=None,  # type: Optional[TShimmedFunc]
+    reqset_provider=None,  # type: Optional[TShimmedFunc]
 ):
-    # type: (...) -> Optional[Union[str, Tuple[List[TInstallRequirement], List[TInstallRequirement]]]]
+    # type: (...) -> Generator[Union[str, Tuple[List[TInstallRequirement], ...]], None, None]
     """
     Build a wheel or a set of wheels
 
@@ -1466,19 +1481,21 @@ def build_wheel(
     :param Optional[TShimmedFunc] install_command_provider: A shim for providing new
         install command instances
     :param TShimmedFunc finder_provider: A provider to package finder instances
+    :param TShimmedFunc reqset_provider: A provider for requirement set generation
     :return: A tuple of successful and failed install requirements or else a path to
         a wheel
     :rtype: Optional[Union[str, Tuple[List[TInstallRequirement], List[TInstallRequirement]]]]
     """
     wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
-    preparer = resolve_possible_shim(preparer)
+    preparer_provider = resolve_possible_shim(preparer_provider)
     wheel_builder_provider = resolve_possible_shim(wheel_builder_provider)
     build_one_provider = resolve_possible_shim(build_one_provider)
     build_one_inside_env_provider = resolve_possible_shim(build_one_inside_env_provider)
     build_many_provider = resolve_possible_shim(build_many_provider)
     install_cmd_provider = resolve_possible_shim(install_command_provider)
     format_control_provider = resolve_possible_shim(format_control_provider)
-    finder_provider = resolve_possible_shim(finder_provider)
+    finder_provider = resolve_possible_shim(finder_provider) or get_package_finder
+    reqset_provider = resolve_possible_shim(reqset_provider)
     global_options = [] if global_options is None else global_options
     build_options = [] if build_options is None else build_options
     options = None
@@ -1493,6 +1510,7 @@ def build_wheel(
     if not req and not reqset:
         raise TypeError("Must provide either a requirement or requirement set to build")
     with ExitStack() as ctx:
+        kwargs = kwarg_map.copy()
         if wheel_cache is None and (reqset is not None or output_dir is None):
             if install_command is None:
                 assert isinstance(install_cmd_provider, (type, functools.partial))
@@ -1505,7 +1523,7 @@ def build_wheel(
                 wheel_cache_provider(options.cache_dir, format_control)
             )
         if req and not reqset and not output_dir:
-            output_dir = wheel_cache.get_path_for_link(req.link)
+            output_dir = get_ireq_output_path(wheel_cache, req)
         if not reqset and build_one_provider:
             yield build_one_provider(req, output_dir, build_options, global_options)
         elif build_many_provider:
@@ -1513,6 +1531,9 @@ def build_wheel(
                 reqset, wheel_cache, build_options, global_options, check_binary_allowed
             )
         else:
+            builder_args, builder_kwargs = get_allowed_args(wheel_builder_provider)
+            if "requirement_set" in builder_args and not reqset:
+                reqset = reqset_provider()
             if session is None and finder is None:
                 session = get_session(install_cmd=install_command, options=options)
                 finder = finder_provider(
@@ -1550,7 +1571,7 @@ def build_wheel(
             )
             if req and not reqset:
                 if not output_dir:
-                    output_dir = wheel_cache.get_path_for_link(req.link)
+                    output_dir = get_ireq_output_path(wheel_cache, req)
                 if use_pep517 is not None:
                     req.use_pep517 = use_pep517
                 yield builder._build_one(req, output_dir)

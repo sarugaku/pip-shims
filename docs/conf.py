@@ -12,25 +12,44 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import io
 import os
+import re
 import sys
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHIMS_DIR = os.path.join(ROOT_DIR, "src", "pip_shims")
 sys.path.insert(0, SHIMS_DIR)
 
 
+def read(root, *parts):
+    with io.open(os.path.join(root, *parts), "r") as fh:
+        return fh.read()
+
+
+def find_version(*file_paths):
+    version_file = read(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    return "0.0.0"
+
+
+full_version = find_version(SHIMS_DIR, "__init__.py")
+short_version = ".".join(full_version.split(".")[:2])
+
 # -- Project information -----------------------------------------------------
 
 project = "pip-shims"
-copyright = "2019, Dan Ryan <dan@danryan.co>"
+copyright = "2020, Dan Ryan <dan@danryan.co>"
 author = "Dan Ryan <dan@danryan.co>"
 
 # The short X.Y version
-version = "0.4"
+version = short_version
 # The full version, including alpha/beta/rc tags
-release = "0.4.0"
+release = full_version
 
+today_fmt = "%B %d, %Y"
 
 # -- General configuration ---------------------------------------------------
 
@@ -43,10 +62,19 @@ release = "0.4.0"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    #  "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "sphinx.ext.todo",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
+]
+
+autoclass_content = "both"  # include both class docstring and __init__
+autodoc_default_flags = [
+    "members",
+    "inherited-members",
+    "private-members",
+    "show-inheritance",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

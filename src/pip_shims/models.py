@@ -104,6 +104,9 @@ PIP_VERSION_SET = {
     "19.2.3",
     "19.3",
     "19.3.1",
+    "20.0",
+    "20.0.1",
+    "20.0.2",
 }
 
 
@@ -140,9 +143,9 @@ class PipVersion(Sequence):
             parsed_version = self._parse()
         if base_import_path is None:
             if parsed_version >= parse_version("10.0.0"):
-                base_import_path = "{0}._internal".format(BASE_IMPORT_PATH)
+                base_import_path = "{}._internal".format(BASE_IMPORT_PATH)
             else:
-                base_import_path = "{0}".format(BASE_IMPORT_PATH)
+                base_import_path = "{}".format(BASE_IMPORT_PATH)
         self.base_import_path = base_import_path
         self.parsed_version = parsed_version
 
@@ -175,13 +178,12 @@ class PipVersion(Sequence):
 
     def __str__(self):
         # type: () -> str
-        return "{0!s}".format(self.parsed_version)
+        return "{!s}".format(self.parsed_version)
 
     def __repr__(self):
         # type: () -> str
         return (
-            "<PipVersion {0!r}, Path: {1!r}, Vendor Path: {2!r}, "
-            "Parsed Version: {3!r}>"
+            "<PipVersion {!r}, Path: {!r}, Vendor Path: {!r}, " "Parsed Version: {!r}>"
         ).format(
             self.version,
             self.base_import_path,
@@ -253,17 +255,17 @@ class PipVersionRange(Sequence):
 
     def __str__(self):
         # type: () -> str
-        return "{0!s} -> {1!s}".format(self._versions[0], self._versions[-1])
+        return "{!s} -> {!s}".format(self._versions[0], self._versions[-1])
 
     @property
     def base_import_paths(self):
         # type: () -> Set[str]
-        return set([version.base_import_path for version in self._versions])
+        return {version.base_import_path for version in self._versions}
 
     @property
     def vendor_import_paths(self):
         # type: () -> Set[str]
-        return set([version.vendor_import_path for version in self._versions])
+        return {version.vendor_import_path for version in self._versions}
 
     def is_valid(self):
         # type: () -> bool
@@ -430,7 +432,7 @@ class ShimmedPath(object):
         if not self.is_class:
             return provided
         if not inspect.isclass(provided):
-            raise TypeError("Provided argument is not a class: {0!r}".format(provided))
+            raise TypeError("Provided argument is not a class: {!r}".format(provided))
         methods = self._parse_provides_dict(
             self.provided_methods, prepend_arg_to_callables="self"
         )
@@ -554,9 +556,7 @@ class ShimmedPath(object):
         imported, result = self._shim_parent(imported, attribute_name)
         if result is not None:
             result = self._ensure_functions(result)
-            full_import_path = "{0}.{1}".format(
-                self.calculated_module_path, attribute_name
-            )
+            full_import_path = "{}.{}".format(self.calculated_module_path, attribute_name)
             self._imported = imported
             assert isinstance(result, types.ModuleType)
             self._provided = result
@@ -1218,5 +1218,6 @@ build_wheel.set_default(
         build_many_provider=build,
         preparer_provider=make_preparer,
         format_control_provider=FormatControl,
+        reqset_provider=get_requirement_set,
     )
 )

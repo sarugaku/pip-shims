@@ -5,6 +5,6 @@ pip_shims
     :local:
 
 .. automodule:: pip_shims
-   :members:
-   :undoc-members:
-   :show-inheritance:
+
+    Members
+    =======

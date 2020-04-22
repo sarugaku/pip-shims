@@ -73,7 +73,7 @@ from pip_shims import (
     url_to_path,
     wheel_cache,
 )
-from pip_shims.compat import get_session
+from pip_shims.compat import ensure_resolution_dirs, get_session
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
@@ -162,8 +162,8 @@ def test_link_and_ireq():
 def test_path_and_url():
     path = "/path/to/file"
     prefix, _ = os.path.splitdrive(os.getcwd())
-    prefix = "/{0}".format(prefix) if prefix else ""
-    url = "file://{0}{1}".format(prefix, path)
+    prefix = "/{}".format(prefix) if prefix else ""
+    url = "file://{}{}".format(prefix, path)
     assert is_file_url(Link(url))
     assert path_to_url(path) == url
     assert url_to_path(url) == os.path.realpath(path)
@@ -278,7 +278,7 @@ def test_resolution(tmpdir, PipCommand):
             for c in requests_candidates
             if c.version
             in ireq.specifier.filter(
-                (candidate.version for candidate in requests_candidates)
+                candidate.version for candidate in requests_candidates
             )
         ],
         key=lambda c: c.version,
@@ -601,7 +601,7 @@ def test_get_packagefinder():
             for c in requests_candidates
             if c.version
             in ireq.specifier.filter(
-                (candidate.version for candidate in requests_candidates)
+                candidate.version for candidate in requests_candidates
             )
         ],
         key=lambda c: c.version,
@@ -638,3 +638,24 @@ def test_get_session():
     cmd = InstallCommand()
     sess = get_session(install_cmd=cmd)
     assert type(sess).__base__.__name__ == "Session"
+
+
+@pytest.mark.skip("wheel building is apparently broken...")
+def test_build_wheel():
+    ireq = InstallRequirement.from_line(
+        "https://files.pythonhosted.org/packages/6e/40/7434b2d9fe24107ada25ec90a1fc646e97f346130a2c51aa6a2b1aba28de/requests-2.12.1.tar.gz#egg=requests"
+    )
+    with ensure_resolution_dirs() as kwargs:
+        ireq.ensure_has_source_dir(kwargs["src_dir"])
+        cmd = InstallCommand()
+        options, _ = cmd.parser.parse_args([])
+        session = cmd._build_session(options)
+        shim_unpack(
+            download_dir=kwargs["download_dir"],
+            ireq=ireq,
+            location=ireq.source_dir,
+            only_download=False,
+            session=session,
+        )
+        wheel = next(iter(build_wheel(req=ireq, **kwargs)))
+        assert os.path.exists(wheel)

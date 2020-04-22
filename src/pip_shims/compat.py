@@ -962,7 +962,7 @@ def get_ireq_output_path(wheel_cache, ireq):
     if getattr(wheel_cache, "get_path_for_link", None):
         return wheel_cache.get_path_for_link(ireq.link)
     elif getattr(wheel_cache, "cached_wheel", None):
-        return wheel_cache.cached_wheel(ireq.link, ireq.name)
+        return wheel_cache.cached_wheel(ireq.link, ireq.name).url_without_fragment
 
 
 def get_resolver(

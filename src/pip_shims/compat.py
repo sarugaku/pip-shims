@@ -674,11 +674,11 @@ def get_package_finder(
     ):
         if target_python and not received_python:
             tags = target_python.get_tags()
-            version_impl = set([t[0] for t in tags])
+            version_impl = {t[0] for t in tags}
             # impls = set([v[:2] for v in version_impl])
             # impls.remove("py")
             # impl = next(iter(impls), "py") if not target_python
-            versions = set([v[2:] for v in version_impl])
+            versions = {v[2:] for v in version_impl}
             build_kwargs.update(
                 {
                     "platform": target_python.platform,
@@ -1090,7 +1090,7 @@ def get_resolver(
             continue
         elif val is None and install_cmd is None:
             raise TypeError(
-                "Preparer requires a {0} but did not receive one "
+                "Preparer requires a {} but did not receive one "
                 "and cannot generate one".format(arg)
             )
         elif arg == "session" and val is None:
@@ -1300,7 +1300,9 @@ def resolve(  # noqa:C901
         if session is None:
             session = get_session(install_cmd=install_command, options=options)
         if finder is None:
-            finder = finder_provider(install_command, options=options, session=session)  # type: ignore
+            finder = finder_provider(
+                install_command, options=options, session=session
+            )  # type: ignore
         format_control = getattr(options, "format_control", None)
         if not format_control:
             format_control = format_control_provider(None, None)  # type: ignore
@@ -1310,12 +1312,17 @@ def resolve(  # noqa:C901
         ireq.is_direct = True  # type: ignore
         build_location_kwargs = {"build_dir": kwargs["build_dir"], "autodelete": True}
         call_function_with_correct_args(ireq.build_location, **build_location_kwargs)
-        # ireq.build_location(kwargs["build_dir"])  # type: ignore
         if reqset_provider is None:
             raise TypeError(
                 "cannot resolve without a requirement set provider... failed!"
             )
-        reqset = reqset_provider(install_command, options=options, session=session, wheel_download_dir=wheel_download_dir, **kwargs)  # type: ignore
+        reqset = reqset_provider(
+            install_command,
+            options=options,
+            session=session,
+            wheel_download_dir=wheel_download_dir,
+            **kwargs
+        )  # type: ignore
         if getattr(reqset, "prepare_files", None):
             reqset.add_requirement(ireq)
             results = reqset.prepare_files(finder)
@@ -1338,7 +1345,6 @@ def resolve(  # noqa:C901
             "use_user_site": use_user_site,
             "require_hashes": require_hashes,
         }
-        # with req_tracker_provider() as req_tracker:
         if isinstance(req_tracker_provider, (types.FunctionType, functools.partial)):
             preparer_args["req_tracker"] = ctx.enter_context(req_tracker_provider())
         resolver_keys = [
@@ -1414,7 +1420,7 @@ def build_wheel(
     install_command_provider=None,  # type: Optional[TShimmedFunc]
     finder_provider=None,  # type: Optional[TShimmedFunc]
 ):
-    # type: (...) -> Optional[Union[str, Tuple[List[TInstallRequirement], List[TInstallRequirement]]]]
+    # type: (...) -> Generator[Union[str, Tuple[List[TInstallRequirement], ...]], None, None]
     """
     Build a wheel or a set of wheels
 
@@ -1472,6 +1478,7 @@ def build_wheel(
     """
     wheel_cache_provider = resolve_possible_shim(wheel_cache_provider)
     preparer = resolve_possible_shim(preparer)
+    preparer_provider = resolve_possible_shim(preparer_provider)
     wheel_builder_provider = resolve_possible_shim(wheel_builder_provider)
     build_one_provider = resolve_possible_shim(build_one_provider)
     build_one_inside_env_provider = resolve_possible_shim(build_one_inside_env_provider)

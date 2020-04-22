@@ -2,9 +2,27 @@
 # Create and test a Python package on multiple Python versions.
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
-
+name: CI
 trigger:
-- master
+  batch: true
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - docs/*
+    - news/*
+    - pytest.ini
+    - README.md
+    - LICENSE
+    - README.rst
+    - CHANGELOG.rst
+    - CONTRIBUTING.md
+    - CODE_OF_CONDUCT.md
+    - .gitignore
+    - .gitattributes
+    - .editorconfig
+    - .travis.yml
 
 jobs:
 - template: .azure-pipelines/templates/run-tests.yml

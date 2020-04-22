@@ -73,7 +73,7 @@ from pip_shims import (
     url_to_path,
     wheel_cache,
 )
-from pip_shims.compat import get_session
+from pip_shims.compat import ensure_resolution_dirs, get_session
 
 STRING_TYPES = (str,)
 if sys.version_info < (3, 0):
@@ -638,3 +638,23 @@ def test_get_session():
     cmd = InstallCommand()
     sess = get_session(install_cmd=cmd)
     assert type(sess).__base__.__name__ == "Session"
+
+
+def test_build_wheel():
+    ireq = install_req_from_line(
+        "https://files.pythonhosted.org/packages/05/8c/40cd6949373e23081b3ea20d5594ae523e681b6f472e600fbc95ed046a36/urllib3-1.25.9.tar.gz#egg=urllib3"
+    )
+    with ensure_resolution_dirs() as kwargs:
+        ireq.ensure_has_source_dir(kwargs["src_dir"])
+        cmd = InstallCommand()
+        options, _ = cmd.parser.parse_args([])
+        session = cmd._build_session(options)
+        shim_unpack(
+            download_dir=kwargs["download_dir"],
+            ireq=ireq,
+            location=ireq.source_dir,
+            only_download=False,
+            session=session,
+        )
+        wheel = next(iter(build_wheel(req=ireq, **kwargs)))
+        assert os.path.exists(wheel)

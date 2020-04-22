@@ -1478,7 +1478,7 @@ def build_wheel(
     build_many_provider = resolve_possible_shim(build_many_provider)
     install_cmd_provider = resolve_possible_shim(install_command_provider)
     format_control_provider = resolve_possible_shim(format_control_provider)
-    finder_provider = resolve_possible_shim(finder_provider)
+    finder_provider = resolve_possible_shim(finder_provider) or get_package_finder
     global_options = [] if global_options is None else global_options
     build_options = [] if build_options is None else build_options
     options = None
@@ -1493,6 +1493,7 @@ def build_wheel(
     if not req and not reqset:
         raise TypeError("Must provide either a requirement or requirement set to build")
     with ExitStack() as ctx:
+        kwargs = kwarg_map.copy()
         if wheel_cache is None and (reqset is not None or output_dir is None):
             if install_command is None:
                 assert isinstance(install_cmd_provider, (type, functools.partial))

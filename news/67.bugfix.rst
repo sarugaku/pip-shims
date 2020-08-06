@@ -1,0 +1,1 @@
+Avoid overriding slot members when adding new methods to a class.

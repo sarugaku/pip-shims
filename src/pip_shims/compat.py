@@ -1318,7 +1318,11 @@ def resolve(  # noqa:C901
             wheel_cache_provider(kwargs["cache_dir"], format_control)
         )  # type: ignore
         ireq.is_direct = True  # type: ignore
-        build_location_kwargs = {"build_dir": kwargs["build_dir"], "autodelete": True}
+        build_location_kwargs = {
+            "build_dir": kwargs["build_dir"],
+            "autodelete": True,
+            "parallel_builds": False
+        }
         call_function_with_correct_args(ireq.build_location, **build_location_kwargs)
         if reqset_provider is None:
             raise TypeError(

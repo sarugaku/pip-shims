@@ -928,7 +928,7 @@ def make_preparer(
         if "req_tracker" in required_args:
             req_tracker = tracker_ctx if req_tracker is None else req_tracker
             preparer_args["req_tracker"] = req_tracker
-
+        preparer_args["lazy_wheel"] = True
         result = call_function_with_correct_args(preparer_fn, **preparer_args)
         yield result
 

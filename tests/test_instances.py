@@ -378,6 +378,7 @@ def test_resolution(tmpdir, PipCommand):
                 if parse_version(pip_version) >= parse_version("19.3.9"):
                     preparer_kwargs.pop("session", None)
                 if parse_version(pip_version) > parse_version("20.2"):
+                    preparer_kwargs["session"] = session
                     preparer_kwargs["lazy_wheel"] = True
                 preparer = RequirementPreparer(**preparer_kwargs)
                 resolver_kwargs["preparer"] = preparer
@@ -570,6 +571,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
                     {"use_user_site": False, "require_hashes": False,}
                 )
             if parse_version(pip_version) > parse_version("20.2"):
+                kwargs["session"] = session
                 kwargs["lazy_wheel"] = True
             wheelcache = kwargs.pop("wheel_cache")
             with get_requirement_tracker() as req_tracker:

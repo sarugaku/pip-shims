@@ -904,13 +904,9 @@ def make_preparer(
     if options is not None and pip_options_created:
         for k, v in options_map.items():
             suppress_setattr(options, k, v, filter_none=True)
-    if all([session is None, install_cmd is None, session_is_required]):
-        raise TypeError(
-            "Preparer requires a session instance which was not supplied and cannot be "
-            "created without an InstallCommand."
-        )
-    elif all([session is None, session_is_required]):
-        session = get_session(install_cmd=install_cmd, options=options)
+    if session_is_required:
+        if session is None:
+            session = get_session(install_cmd=install_cmd, options=options)
         preparer_args["session"] = session
     if finder_is_required:
         finder = _ensure_finder(

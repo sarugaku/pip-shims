@@ -1,1 +1,0 @@
-Call ``resolve()`` with correct arguments for pip 20.2.

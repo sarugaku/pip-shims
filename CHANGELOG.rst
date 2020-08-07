@@ -1,3 +1,14 @@
+0.5.3 (2020-08-08)
+==================
+
+Bug Fixes
+---------
+
+- Avoid overriding slot members when adding new methods to a class.  `#67 <https://github.com/sarugaku/pip-shims/issues/67>`_
+  
+- Call ``resolve()`` with correct arguments for pip 20.2.  `#68 <https://github.com/sarugaku/pip-shims/issues/68>`_
+
+
 0.5.2 (2020-04-22)
 ==================
 

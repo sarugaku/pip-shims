@@ -64,4 +64,4 @@ jobs:
         env:
           CI: "1"
         run: |
-          nox -p ${{ matrix.python-version }} -s tests
+          nox -s tests

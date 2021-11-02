@@ -25,7 +25,7 @@ import sys
 
 from . import shims
 
-__version__ = "0.5.4.dev0"
+__version__ = "0.6.0"
 
 
 if "pip_shims" in sys.modules:

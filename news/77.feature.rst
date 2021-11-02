@@ -1,1 +1,0 @@
-No longer guarantee compatibility for ``pip<20``. Add support for ``pip==21.3``.

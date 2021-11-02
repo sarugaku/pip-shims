@@ -1,3 +1,19 @@
+Pip_Shims 0.6.0 (2021-11-03)
+============================
+
+
+Features
+--------
+
+- No longer guarantee compatibility for ``pip<20``. Add support for ``pip==21.3``.  `#77 <https://github.com/sarugaku/pip-shims/issues/77>`_
+  
+
+Removals and Deprecations
+-------------------------
+
+- Drop support for Python 2.7 and 3.5.  `#77 <https://github.com/sarugaku/pip-shims/issues/77>`_
+
+
 0.5.3 (2020-08-08)
 ==================
 

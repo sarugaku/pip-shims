@@ -49,7 +49,7 @@ def _current_version() -> parver.Version:
 
 
 def _prebump(version: parver.Version) -> parver.Version:
-    next_version = version.bump_release(index=3).bump_dev()
+    next_version = version.bump_release(index=2).bump_dev()
     print(f"[bump] {version} -> {next_version}")
     return next_version
 

@@ -36,8 +36,7 @@ def docs(session: nox.Session):
 
 @nox.session
 def package(session: nox.Session):
-    session.install("build", "check-manifest", "twine")
-    session.run("check-manifest")
+    session.install("build", "twine")
     session.run("pyproject-build")
     session.run("twine", "check", "dist/*")
 

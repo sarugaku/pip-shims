@@ -7,7 +7,6 @@ import textwrap
 from functools import partial
 
 import pytest
-import six
 
 from pip_shims import (
     FAVORITE_HASH,
@@ -131,8 +130,6 @@ def test_format_control():
     else:
         # after pip 18.0 this has its own model
         clsname = "fc"
-        if six.PY2:
-            clsname = clsname.encode(sys.getdefaultencoding())
         fc = type(clsname, (FormatControl,), {})
     assert fc(None, None) == FormatControl(None, None)
 

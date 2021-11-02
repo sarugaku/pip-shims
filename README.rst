@@ -61,8 +61,8 @@ Summary
 ********
 
 **pip-shims** is a set of compatibilty access shims to the `pip`_ internal API. **pip-shims**
-provides compatibility with pip versions 8.0 through the current release (18.x).  The shims
-are provided using a lazy import strategy by hacking a module by overloading a class instance's *getattr* method.
+provides compatibility across several pip releases.  The shims are provided using a lazy
+import strategy by hacking a module by overloading a class instance's *getattr* method.
 This library exists due to my constant writing of the same set of import shims across
 many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_, and
 `passa`_.
@@ -73,6 +73,14 @@ many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_,
 .. _pip-tools: https://github.com/jazzband/pip-tools
 .. _requirementslib: https://github.com/sarugaku/requirementslib
 
+Pip Compatibility
+*****************
+
+Due to the fact that pip has adopted `calver`_, this project provides shims for 2 years.
+pip releases earlier than that period MAY work but the compatibility isn't guaranteed
+by the continous integration.
+
+.. _calver: https://calver.org/
 
 .. _`Usage`:
 

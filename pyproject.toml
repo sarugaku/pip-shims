@@ -26,7 +26,6 @@ package = 'pip_shims'
 package_dir = 'src'
 filename = 'CHANGELOG.rst'
 directory = 'news/'
-title_format = '{version} ({project_date})'
 issue_format = '`#{issue} <https://github.com/sarugaku/pip-shims/issues/{issue}>`_'
 template = 'tasks/CHANGELOG.rst.jinja2'
 

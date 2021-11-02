@@ -1,8 +1,6 @@
-# -*- coding=utf-8 -*-
 """
 Backports and helper functionality to support using new functionality.
 """
-from __future__ import absolute_import, print_function
 
 import atexit
 import contextlib
@@ -13,7 +11,6 @@ import re
 import sys
 import types
 
-import six
 from packaging import specifiers
 
 from .environment import MYPY_RUNNING
@@ -31,15 +28,10 @@ if sys.version_info[:2] < (3, 5):
 else:
     from tempfile import TemporaryDirectory
 
-if six.PY3:
-    from contextlib import ExitStack
-else:
-    from contextlib2 import ExitStack
-
+from contextlib import ExitStack
 
 if MYPY_RUNNING:
     from optparse import Values
-    from requests import Session
     from typing import (
         Any,
         Callable,
@@ -55,7 +47,10 @@ if MYPY_RUNNING:
         TypeVar,
         Union,
     )
-    from .utils import TShimmedPath, TShim, TShimmedFunc
+
+    from requests import Session
+
+    from .utils import TShim, TShimmedFunc, TShimmedPath
 
     TFinder = TypeVar("TFinder")
     TResolver = TypeVar("TResolver")
@@ -662,11 +657,16 @@ def get_package_finder(
         if python_versions:
             py_version_info_python = max(python_versions)
             py_version_info = tuple([int(part) for part in py_version_info_python])
-        target_python = target_python_builder(
-            platform=platform,
-            abi=abi,
-            implementation=implementation,
-            py_version_info=py_version_info,
+        target_python_args = {
+            "platform": platform,
+            "platforms": [platform] if platform else None,
+            "abi": abi,
+            "abis": [abi] if abi else None,
+            "implementation": implementation,
+            "py_version_info": py_version_info,
+        }
+        target_python = call_function_with_correct_args(
+            target_python_builder, **target_python_args
         )
         build_kwargs["target_python"] = target_python
     elif any(
@@ -762,10 +762,13 @@ def shim_unpack(
             unpack_kwargs["only_download"] = only_download
         if session is not None and "session" in required_args:
             unpack_kwargs["session"] = session
-        if "downloader" in required_args and downloader_provider is not None:
+        if (
+            "download" in required_args or "downloader" in required_args
+        ) and downloader_provider is not None:
+            arg_name = "download" if "download" in required_args else "downloader"
             assert session is not None
             assert progress_bar is not None
-            unpack_kwargs["downloader"] = downloader_provider(session, progress_bar)
+            unpack_kwargs[arg_name] = downloader_provider(session, progress_bar)
         return unpack_fn(**unpack_kwargs)  # type: ignore
 
 
@@ -919,6 +922,8 @@ def make_preparer(
         preparer_args["finder"] = finder
     if downloader_is_required:
         preparer_args["downloader"] = downloader_provider(session, progress_bar)
+    if "in_tree_build" in required_args:
+        preparer_args["in_tree_build"] = True
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:
         if "req_tracker" in required_args:
@@ -1317,7 +1322,7 @@ def resolve(  # noqa:C901
         build_location_kwargs = {
             "build_dir": kwargs["build_dir"],
             "autodelete": True,
-            "parallel_builds": False
+            "parallel_builds": False,
         }
         call_function_with_correct_args(ireq.build_location, **build_location_kwargs)
         if reqset_provider is None:

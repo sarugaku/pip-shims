@@ -28,8 +28,7 @@ def _get_branch(ctx):
 
 @invoke.task()
 def clean(ctx):
-    """Clean previously built package artifacts.
-    """
+    """Clean previously built package artifacts."""
     dist = ROOT.joinpath("dist")
     build = ROOT.joinpath("build")
     print("[clean] Removing dist and build dirs")
@@ -76,8 +75,7 @@ def _write_version(v):
 
 
 def _render_log():
-    """Totally tap into Towncrier internals to get an in-memory result.
-    """
+    """Totally tap into Towncrier internals to get an in-memory result."""
     config = load_config(ROOT)
     definitions = config["types"]
     fragments, fragment_filenames = find_fragments(
@@ -217,8 +215,7 @@ def release(ctx, version=None, type_="patch", yes=False, dry_run=False):
 
 @invoke.task(pre=[clean])
 def full_release(ctx, type_, repo, prebump=PREBUMP, yes=False):
-    """Make a new release.
-    """
+    """Make a new release."""
     if prebump not in REL_TYPES:
         raise ValueError(f"{type_} not in {REL_TYPES}")
     prebump = REL_TYPES.index(prebump)
@@ -229,7 +226,7 @@ def full_release(ctx, type_, repo, prebump=PREBUMP, yes=False):
 
     tag_release(version, yes=yes)
 
-    ctx.run(f"python setup.py sdist bdist_wheel")
+    ctx.run("python setup.py sdist bdist_wheel")
 
     dist_pattern = f'{PACKAGE_NAME.replace("-", "[-_]")}-*'
     artifacts = list(ROOT.joinpath("dist").glob(dist_pattern))
@@ -257,14 +254,14 @@ def build_docs(ctx):
     minor = [str(i) for i in _current_version.release[:2]]
     docs_folder = (_get_git_root(ctx) / "docs").as_posix()
     if not docs_folder.endswith("/"):
-        docs_folder = "{0}/".format(docs_folder)
+        docs_folder = "{}/".format(docs_folder)
     args = ["--ext-autodoc", "--ext-viewcode", "-o", docs_folder]
     args.extend(["-A", "'Dan Ryan <dan@danryan.co>'"])
     args.extend(["-R", str(_current_version)])
     args.extend(["-V", ".".join(minor)])
     args.extend(["-e", "-M", "-F", f"src/{PACKAGE_NAME}"])
     print("Building docs...")
-    ctx.run("sphinx-apidoc {0}".format(" ".join(args)))
+    ctx.run("sphinx-apidoc {}".format(" ".join(args)))
 
 
 @invoke.task

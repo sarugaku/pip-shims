@@ -17,10 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - uses: webfactory/ssh-agent@v0.1.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1.0.0
@@ -58,4 +54,9 @@ jobs:
           git config --local user.email action@github.com
           nox -s bump_version
           git commit -am 'pre-bump'
-          git push git@github.com:${{ github.repository }}.git HEAD:master
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

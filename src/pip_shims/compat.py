@@ -1423,6 +1423,8 @@ def build_wheel(  # noqa:C901
     cache_dir=None,  # type: Optional[str]
     use_user_site=False,  # type: bool
     use_pep517=None,  # type: Optional[bool]
+    verify=False,  # type: bool
+    editable=False,  # type: bool
     format_control_provider=None,  # type: Optional[TShimmedFunc]
     wheel_cache_provider=None,  # type: Optional[TShimmedFunc]
     preparer_provider=None,  # type: Optional[TShimmedFunc]
@@ -1530,7 +1532,15 @@ def build_wheel(  # noqa:C901
         if req and not reqset and not output_dir:
             output_dir = get_ireq_output_path(wheel_cache, req)
         if not reqset and build_one_provider:
-            yield build_one_provider(req, output_dir, build_options, global_options)
+            build_one_kwargs = {
+                "req": req,
+                "output_dir": output_dir,
+                "verify": verify,
+                "editable": editable,
+                "build_options": build_options,
+                "global_options": global_options,
+            }
+            yield call_function_with_correct_args(build_one_provider, **build_one_kwargs)
         elif build_many_provider:
             yield build_many_provider(
                 reqset, wheel_cache, build_options, global_options, check_binary_allowed

@@ -804,7 +804,7 @@ get_installed_distributions = ShimmedPathCollection(
     "get_installed_distributions", ImportTypes.FUNCTION
 )
 get_installed_distributions.create_path(
-    "utils.misc.get_installed_distributions", "10", "9999"
+    "utils.misc.get_installed_distributions", "10", "21.2.999"
 )
 get_installed_distributions.create_path("utils.get_installed_distributions", "7", "9.0.3")
 

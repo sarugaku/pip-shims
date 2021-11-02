@@ -55,6 +55,7 @@ from pip_shims import (
     is_installable_dir,
     make_abstract_dist,
     make_option_group,
+    global_tempdir_manager,
     make_preparer,
     parse_version,
     path_to_url,
@@ -136,6 +137,9 @@ def test_format_control():
     assert fc(None, None) == FormatControl(None, None)
 
 
+@pytest.mark.skipif(
+    parse_version(pip_version) >= parse_version("21.3"), reason="Removed in pip 21.3"
+)
 def test_get_installed():
     dists = get_installed_distributions()
     assert "pip-shims" in [p.project_name for p in dists]
@@ -288,6 +292,7 @@ def test_resolution(tmpdir, PipCommand):
             "progress_bar": "off",
             "build_isolation": False,
             "finder": finder,
+            "session": session,
             "require_hashes": False,
             "use_user_site": False,
         }
@@ -541,12 +546,11 @@ def test_get_session():
     assert type(sess).__base__.__name__ == "Session"
 
 
-@pytest.mark.skip("wheel building is apparently broken...")
 def test_build_wheel():
     ireq = InstallRequirement.from_line(
         "https://files.pythonhosted.org/packages/6e/40/7434b2d9fe24107ada25ec90a1fc646e97f346130a2c51aa6a2b1aba28de/requests-2.12.1.tar.gz#egg=requests"
     )
-    with ensure_resolution_dirs() as kwargs:
+    with global_tempdir_manager(), ensure_resolution_dirs() as kwargs:
         ireq.ensure_has_source_dir(kwargs["src_dir"])
         cmd = InstallCommand()
         options, _ = cmd.parser.parse_args([])

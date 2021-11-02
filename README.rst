@@ -8,8 +8,8 @@ pip-shims: Shims for importing packages from pip's internals.
 .. image:: https://img.shields.io/pypi/l/pip-shims.svg
     :target: https://pypi.python.org/pypi/pip-shims
 
-.. image:: https://dev.azure.com/sarugaku/pip-shims/_apis/build/status/sarugaku.pip-shims?branchName=master)](https://dev.azure.com/sarugaku/pip-shims/_build/latest?definitionId=5&branchName=master
-    :target: https://dev.azure.com/sarugaku/pip-shims/_build/latest?definitionId=5&branchName=master
+.. image:: https://github.com/sarugaku/pip-shims/actions/workflows/ci.yml/badge.svg
+    :target: https://github.com/sarugaku/pip-shims/actions/workflows/ci.yml
     :alt: Build Status
 
 .. image:: https://img.shields.io/pypi/pyversions/pip-shims.svg
@@ -76,9 +76,9 @@ many different libraries, including `pipenv`_, `pip-tools`_, `requirementslib`_,
 Pip Compatibility
 *****************
 
-Due to the fact that pip has adopted `calver`_, this project provides shims for 2 years.
-pip releases earlier than that period MAY work but the compatibility isn't guaranteed
-by the continous integration.
+Due to the fact that pip has adopted `calver`_, this project provides shims for pip releases
+up to 2 years. pip earlier than that period MAY work but the compatibility isn't guaranteed
+by the continous integration. For example, the support for ``pip==20.0`` will be dropped at 1/1/2023.
 
 .. _calver: https://calver.org/
 

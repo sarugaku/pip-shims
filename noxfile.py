@@ -1,8 +1,8 @@
-from pathlib import Path
 import subprocess
-import parver
+from pathlib import Path
 
 import nox
+import parver
 
 BASE_PATH = Path(__file__).resolve().parent
 PACKAGE_ROOT = BASE_PATH / "src/pip_shims"

@@ -708,6 +708,7 @@ def shim_unpack(
     only_download=None,  # type: Optional[bool]
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     session=None,  # type: Optional[Any]
+    verbosity=0,  # type: Optional[int]
 ):
     # (...) -> None
     """
@@ -735,6 +736,7 @@ def shim_unpack(
         to instantiate, if applicable.
     :param Optional[`~requests.Session`] session: A PipSession instance, defaults to
         None.
+    :param Optional[int] verbosity: 1 or 0 to indicate verbosity flag, defaults to 0.
     :return: The result of unpacking the url.
     :rtype: None
     """
@@ -742,7 +744,7 @@ def shim_unpack(
     downloader_provider = resolve_possible_shim(downloader_provider)
     tempdir_manager_provider = resolve_possible_shim(tempdir_manager_provider)
     required_args = inspect.getargs(unpack_fn.__code__).args  # type: ignore
-    unpack_kwargs = {"download_dir": download_dir}
+    unpack_kwargs = {"download_dir": download_dir, "verbosity": verbosity}
     with tempdir_manager_provider():
         if ireq:
             if not link and ireq.link:

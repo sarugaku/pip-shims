@@ -1,3 +1,13 @@
+Pip_Shims 0.7.0 (2022-03-28)
+============================
+
+
+Features
+--------
+
+- This change gets ``pip-shims`` working with ``pip==22.x``, ``main`` branch, and also fixes linting build.  `#79 <https://github.com/sarugaku/pip-shims/issues/79>`_
+
+
 Pip_Shims 0.6.0 (2021-11-03)
 ============================
 

@@ -820,6 +820,7 @@ def make_preparer(
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
     finder_provider=None,  # type: Optional[TShimmedFunc]
+    verbosity=0,  # type: Optional[int]
 ):
     # (...) -> ContextManager
     """
@@ -928,6 +929,8 @@ def make_preparer(
         preparer_args["downloader"] = downloader_provider(session, progress_bar)
     if "in_tree_build" in required_args:
         preparer_args["in_tree_build"] = True
+    if "verbosity" in required_args:
+        preparer_args["verbosity"] = verbosity
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:
         if "req_tracker" in required_args:

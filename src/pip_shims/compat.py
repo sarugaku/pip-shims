@@ -816,6 +816,7 @@ def make_preparer(
     require_hashes=None,  # type: Optional[bool]
     use_user_site=None,  # type: Optional[bool]
     req_tracker=None,  # type: Optional[Union[TReqTracker, TShimmedFunc]]
+    build_tracker=None,  # type: Optional[Union[TBuildTracker, TShimmedFunc]]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
@@ -856,6 +857,8 @@ def make_preparer(
         preparing requirements
     :param Optional[Union[TReqTracker, TShimmedFunc]] req_tracker: The requirement
         tracker to use for building packages, defaults to None
+    :param Optional[Union[TBuildTracker, TShimmedFunc]] build_tracker: The build
+        tracker to use for building packages, defaults to None and fallsback to req_tracker.
     :param Optional[TShimmedFunc] downloader_provider: A downloader provider
     :param Optional[TCommandInstance] install_cmd: The install command used to create
         the finder, session, and options if needed, defaults to None
@@ -936,6 +939,10 @@ def make_preparer(
         if "req_tracker" in required_args:
             req_tracker = tracker_ctx if req_tracker is None else req_tracker
             preparer_args["req_tracker"] = req_tracker
+        if "build_tracker" in required_args:
+            req_tracker = tracker_ctx if req_tracker is None else req_tracker
+            build_tracker = req_tracker if build_tracker is None else build_tracker
+            preparer_args["build_tracker"] = build_tracker
         preparer_args["lazy_wheel"] = True
         result = call_function_with_correct_args(preparer_fn, **preparer_args)
         yield result

@@ -303,9 +303,6 @@ def test_resolution(tmpdir, PipCommand):
             "ignore_installed": True,
             "use_user_site": False,
         }
-        if parse_version(pip_version) >= parse_version("22.0"):
-            #preparer_kwargs['verbosity'] = 1
-            pass
         if (
             parse_version("19.3")
             <= parse_version(pip_version)

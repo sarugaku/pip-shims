@@ -238,6 +238,8 @@ def test_resolution(tmpdir, PipCommand):
                 "ignore_requires_python": selection_prefs.ignore_requires_python,
             }
         )
+        if parse_version(pip_version) >= parse_version("22.0"):
+            finder_args["use_deprecated_html5lib"] = False
     else:
         finder_args = {
             "find_links": pip_options.find_links,
@@ -246,8 +248,6 @@ def test_resolution(tmpdir, PipCommand):
             "session": session,
             "allow_all_prereleases": False,
         }
-        if parse_version(pip_version) >= parse_version("22.0.0"):
-            finder_args["use_deprecated_html5lib"] = False
     finder = PackageFinder(**finder_args)
     ireq = InstallRequirement.from_line("requests>=2.18")
     if install_req_from_line:
@@ -303,6 +303,9 @@ def test_resolution(tmpdir, PipCommand):
             "ignore_installed": True,
             "use_user_site": False,
         }
+        if parse_version(pip_version) >= parse_version("22.0"):
+            #preparer_kwargs['verbosity'] = 1
+            pass
         if (
             parse_version("19.3")
             <= parse_version(pip_version)
@@ -425,6 +428,8 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 "ignore_requires_python": selection_prefs.ignore_requires_python,
             }
         )
+        if parse_version(pip_version) >= parse_version("22.0"):
+            finder_args["use_deprecated_html5lib"] = False
     else:
         finder_args = {
             "find_links": pip_options.find_links,
@@ -433,8 +438,6 @@ def test_wheelbuilder(tmpdir, PipCommand):
             "session": session,
             "allow_all_prereleases": False,
         }
-        if parse_version(pip_version) >= parse_version("22.0.0"):
-            finder_args["use_deprecated_html5lib"] = False
     finder = PackageFinder(**finder_args)
     build_dir = tmpdir.mkdir("build_dir")
     source_dir = tmpdir.mkdir("source_dir")

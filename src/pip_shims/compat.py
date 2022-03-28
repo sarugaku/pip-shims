@@ -442,7 +442,7 @@ def get_session(
 def populate_options(
     install_command=None,  # type: TCommandInstance
     options=None,  # type: Optional[Values]
-    **kwargs  # type: Any
+    **kwargs,  # type: Any
 ):
     # (...) -> Tuple[Dict[str, Any], Values]
     results = {}
@@ -1349,7 +1349,7 @@ def resolve(  # noqa:C901
             options=options,
             session=session,
             wheel_download_dir=wheel_download_dir,
-            **kwargs
+            **kwargs,
         )  # type: ignore
         if getattr(reqset, "prepare_files", None):
             reqset.add_requirement(ireq)
@@ -1395,7 +1395,7 @@ def resolve(  # noqa:C901
             options=options,
             install_cmd=install_command,
             wheel_cache=wheel_cache,
-            **resolver_args
+            **resolver_args,
         )  # type: ignore
         resolver.require_hashes = kwargs.get("require_hashes", False)  # type: ignore
         _, required_resolver_args = get_method_args(resolver.resolve)

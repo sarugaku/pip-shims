@@ -246,7 +246,8 @@ def test_resolution(tmpdir, PipCommand):
             "session": session,
             "allow_all_prereleases": False,
         }
-        # finder_args["allow_all_prereleases"] = False
+        if parse_version(pip_version) >= parse_version("22.0.0"):
+            finder_args["use_deprecated_html5lib"] = False
     finder = PackageFinder(**finder_args)
     ireq = InstallRequirement.from_line("requests>=2.18")
     if install_req_from_line:
@@ -432,7 +433,8 @@ def test_wheelbuilder(tmpdir, PipCommand):
             "session": session,
             "allow_all_prereleases": False,
         }
-        # finder_args["allow_all_prereleases"] = False
+        if parse_version(pip_version) >= parse_version("22.0.0"):
+            finder_args["use_deprecated_html5lib"] = False
     finder = PackageFinder(**finder_args)
     build_dir = tmpdir.mkdir("build_dir")
     source_dir = tmpdir.mkdir("source_dir")

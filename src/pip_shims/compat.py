@@ -55,6 +55,7 @@ if MYPY_RUNNING:
     TFinder = TypeVar("TFinder")
     TResolver = TypeVar("TResolver")
     TReqTracker = TypeVar("TReqTracker")
+    TBuildTracker = TypeVar("TBuildTracker")
     TReqSet = TypeVar("TReqSet")
     TLink = TypeVar("TLink")
     TSession = TypeVar("TSession", bound=Session)
@@ -708,6 +709,7 @@ def shim_unpack(
     only_download=None,  # type: Optional[bool]
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     session=None,  # type: Optional[Any]
+    verbosity=0,  # type: Optional[int]
 ):
     # (...) -> None
     """
@@ -735,6 +737,7 @@ def shim_unpack(
         to instantiate, if applicable.
     :param Optional[`~requests.Session`] session: A PipSession instance, defaults to
         None.
+    :param Optional[int] verbosity: 1 or 0 to indicate verbosity flag, defaults to 0.
     :return: The result of unpacking the url.
     :rtype: None
     """
@@ -769,6 +772,8 @@ def shim_unpack(
             assert session is not None
             assert progress_bar is not None
             unpack_kwargs[arg_name] = downloader_provider(session, progress_bar)
+        if "verbosity" in required_args:
+            unpack_kwargs["verbosity"] = verbosity
         return unpack_fn(**unpack_kwargs)  # type: ignore
 
 
@@ -812,10 +817,12 @@ def make_preparer(
     require_hashes=None,  # type: Optional[bool]
     use_user_site=None,  # type: Optional[bool]
     req_tracker=None,  # type: Optional[Union[TReqTracker, TShimmedFunc]]
+    build_tracker=None,  # type: Optional[Union[TBuildTracker, TShimmedFunc]]
     install_cmd_provider=None,  # type: Optional[TShimmedFunc]
     downloader_provider=None,  # type: Optional[TShimmedFunc]
     install_cmd=None,  # type: Optional[TCommandInstance]
     finder_provider=None,  # type: Optional[TShimmedFunc]
+    verbosity=0,  # type: Optional[int]
 ):
     # (...) -> ContextManager
     """
@@ -851,6 +858,8 @@ def make_preparer(
         preparing requirements
     :param Optional[Union[TReqTracker, TShimmedFunc]] req_tracker: The requirement
         tracker to use for building packages, defaults to None
+    :param Optional[Union[TBuildTracker, TShimmedFunc]] build_tracker: The build
+        tracker to use for building packages, defaults to None and fallsback to req_tracker.
     :param Optional[TShimmedFunc] downloader_provider: A downloader provider
     :param Optional[TCommandInstance] install_cmd: The install command used to create
         the finder, session, and options if needed, defaults to None
@@ -883,7 +892,6 @@ def make_preparer(
         raise TypeError("No requirement tracker and no req tracker generator found!")
     if "downloader" in required_args and not downloader_provider:
         raise TypeError("no downloader provided, but one is required to continue!")
-    req_tracker_fn = resolve_possible_shim(req_tracker_fn)
     pip_options_created = options is None
     session_is_required = "session" in required_args
     finder_is_required = "finder" in required_args
@@ -924,11 +932,18 @@ def make_preparer(
         preparer_args["downloader"] = downloader_provider(session, progress_bar)
     if "in_tree_build" in required_args:
         preparer_args["in_tree_build"] = True
+    if "verbosity" in required_args:
+        preparer_args["verbosity"] = verbosity
+    req_tracker_fn = resolve_possible_shim(req_tracker_fn)
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:
         if "req_tracker" in required_args:
             req_tracker = tracker_ctx if req_tracker is None else req_tracker
             preparer_args["req_tracker"] = req_tracker
+        if "build_tracker" in required_args:
+            req_tracker = tracker_ctx if req_tracker is None else req_tracker
+            build_tracker = req_tracker if build_tracker is None else build_tracker
+            preparer_args["build_tracker"] = build_tracker
         preparer_args["lazy_wheel"] = True
         result = call_function_with_correct_args(preparer_fn, **preparer_args)
         yield result

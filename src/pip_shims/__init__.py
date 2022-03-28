@@ -1,6 +1,6 @@
 # -*- coding=utf-8 -*-
 """
-This library is a set of compatibilty access shims to the ``pip`` internal API.
+This library is a set of compatibility access shims to the ``pip`` internal API.
 It provides compatibility with pip versions 8.0 through the current release. The
 shims are provided using a lazy import strategy by hacking a module by overloading
 a class instance's ``getattr`` method. This library exists due to my constant

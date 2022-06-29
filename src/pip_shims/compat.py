@@ -1354,14 +1354,6 @@ def resolve(  # noqa:C901
             wheel_download_dir=wheel_download_dir,
             **kwargs,
         )  # type: ignore
-        if getattr(reqset, "prepare_files", None):
-            reqset.add_requirement(ireq)
-            results = reqset.prepare_files(finder)
-            result = reqset.requirements
-            reqset.cleanup_files()
-            return result
-        if make_preparer_provider is None:
-            raise TypeError("Cannot create requirement preparer, cannot resolve!")
 
         preparer_args = {
             "build_dir": kwargs["build_dir"],
@@ -1410,6 +1402,17 @@ def resolve(  # noqa:C901
             resolver_args.append([ireq])
         if "check_supported_wheels" in required_resolver_args.args:
             resolver_args.append(check_supported_wheels)
+        if getattr(reqset, "prepare_files", None):
+            if hasattr(reqset, "add_requirement"):
+                reqset.add_requirement(ireq)
+            else:  # Pip >= 22.1.0
+                resolver._add_requirement_to_set(reqset, ireq)
+            results = reqset.prepare_files(finder)
+            result = reqset.requirements
+            reqset.cleanup_files()
+            return result
+        if make_preparer_provider is None:
+            raise TypeError("Cannot create requirement preparer, cannot resolve!")
         result_reqset = resolver.resolve(*resolver_args)  # type: ignore
         if result_reqset is None:
             result_reqset = reqset

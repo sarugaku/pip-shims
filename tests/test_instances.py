@@ -331,9 +331,12 @@ def test_resolution(tmpdir, PipCommand):
             resolver_kwargs["preparer"] = preparer
             reqset = RequirementSet()
             ireq.is_direct = True
-            reqset.add_requirement(ireq)
             resolver = get_resolver(**resolver_kwargs)
             resolver.require_hashes = False
+            if hasattr(reqset, "add_requirement"):
+                reqset.add_requirement(ireq)
+            else:  # Pip >= 22.1.0
+                resolver._add_requirement_to_set(reqset, ireq)
             if parse_version(pip_version) > parse_version("20.0.9999999"):
                 resolver._populate_link(ireq)
             results = resolver._resolve_one(reqset, ireq)

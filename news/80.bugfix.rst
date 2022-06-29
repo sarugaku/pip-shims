@@ -1,0 +1,1 @@
+Added support for new ``pip==22.1.x`` required ``make_preparer`` arg ``check_build_deps`` which defaults to ``False``.

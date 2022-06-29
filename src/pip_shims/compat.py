@@ -945,9 +945,10 @@ def make_preparer(
         preparer_args["verbosity"] = verbosity
     if "check_build_deps" in required_args:
         preparer_args["check_build_deps"] = check_build_deps
-    req_tracker_fn = resolve_possible_shim(req_tracker_fn)
-    req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
+
     if "build_tracker" in required_args:
+        build_tracker_fn = resolve_possible_shim(build_tracker_fn)
+        build_tracker_fn = nullcontext if not build_tracker_fn else build_tracker_fn
         with build_tracker_fn() as tracker_ctx:
             build_tracker = tracker_ctx if build_tracker is None else build_tracker
             preparer_args["build_tracker"] = build_tracker
@@ -955,6 +956,8 @@ def make_preparer(
             result = call_function_with_correct_args(preparer_fn, **preparer_args)
             yield result
     if "req_tracker" in required_args:
+        req_tracker_fn = resolve_possible_shim(req_tracker_fn)
+        req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
         with req_tracker_fn() as tracker_ctx:
             req_tracker = tracker_ctx if req_tracker is None else req_tracker
             preparer_args["req_tracker"] = req_tracker

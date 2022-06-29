@@ -17,6 +17,8 @@ PIP_VERSIONS = [
     "pip~=21.2.0",
     "pip~=21.3.0",
     "pip~=22.0.0",
+    "pip~=22.1.0",
+    "pip~=22.1.2",
     "git+https://github.com/pypa/pip.git",
 ]
 

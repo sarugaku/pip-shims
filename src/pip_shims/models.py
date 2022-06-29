@@ -952,7 +952,7 @@ RequirementSet = ShimmedPathCollection("RequirementSet", ImportTypes.CLASS)
 RequirementSet.create_path("req.req_set.RequirementSet", "7.0.0", "9999")
 
 BuildTracker = ShimmedPathCollection("BuildTracker", ImportTypes.CONTEXTMANAGER)
-BuildTracker.create_path(".operations.build.build_tracker.BuildTracker", "22.1", "9999")
+BuildTracker.create_path("operations.build.build_tracker.BuildTracker", "22.1", "9999")
 
 RequirementTracker = ShimmedPathCollection(
     "RequirementTracker", ImportTypes.CONTEXTMANAGER
@@ -993,7 +993,7 @@ get_build_tracker.set_default(
     functools.partial(compat.get_tracker, BuildTracker.shim(), tracker_type="BUILD")
 )
 get_build_tracker.create_path(
-    "operations.build.build_tracker.get_build_tracker", "21.1", "9999"
+    "operations.build.build_tracker.get_build_tracker", "7.0.0", "9999"
 )
 
 Resolver = ShimmedPathCollection("Resolver", ImportTypes.CLASS)

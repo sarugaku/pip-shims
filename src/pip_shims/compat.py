@@ -1396,7 +1396,10 @@ def resolve(  # noqa:C901
         _, required_resolver_args = get_method_args(resolver.resolve)
         resolver_args = []
         if "requirement_set" in required_resolver_args.args:
-            reqset.add_requirement(ireq)
+            if hasattr(reqset, "add_requirement"):
+                reqset.add_requirement(ireq)
+            else:  # Pip >= 22.1.0
+                resolver._add_requirement_to_set(reqset, ireq)
             resolver_args.append(reqset)
         elif "root_reqs" in required_resolver_args.args:
             resolver_args.append([ireq])

@@ -823,6 +823,7 @@ def make_preparer(
     install_cmd=None,  # type: Optional[TCommandInstance]
     finder_provider=None,  # type: Optional[TShimmedFunc]
     verbosity=0,  # type: Optional[int]
+    check_build_deps=False,  # type: Optional[bool]
 ):
     # (...) -> ContextManager
     """
@@ -934,6 +935,8 @@ def make_preparer(
         preparer_args["in_tree_build"] = True
     if "verbosity" in required_args:
         preparer_args["verbosity"] = verbosity
+    if "check_build_deps" in required_args:
+        preparer_args["check_build_deps"] = check_build_deps
     req_tracker_fn = resolve_possible_shim(req_tracker_fn)
     req_tracker_fn = nullcontext if not req_tracker_fn else req_tracker_fn
     with req_tracker_fn() as tracker_ctx:

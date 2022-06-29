@@ -1,3 +1,13 @@
+Pip_Shims 0.7.1 (2022-06-29)
+============================
+
+
+Bug Fixes
+---------
+
+- Added support for new ``pip==22.1.x`` required ``make_preparer`` arg ``check_build_deps`` which defaults to ``False``.  `#80 <https://github.com/sarugaku/pip-shims/issues/80>`_
+
+
 Pip_Shims 0.7.0 (2022-03-28)
 ============================
 

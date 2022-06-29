@@ -84,6 +84,10 @@ def _render_log():
         None,
         definitions,
     )
+    versiondata = {
+        "version": "0.7.1",
+        "date": "2022-06-29",
+    }
     rendered = render_fragments(
         pathlib.Path(config["template"]).read_text(encoding="utf-8"),
         config["issue_format"],
@@ -91,6 +95,7 @@ def _render_log():
         definitions,
         config["underlines"][1:],
         False,  # Don't add newlines to wrapped text.
+        versiondata=versiondata,
     )
     return rendered
 

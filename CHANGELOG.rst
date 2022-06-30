@@ -1,3 +1,23 @@
+Pip_Shims 0.7.2 (2022-06-29)
+============================
+
+
+Features
+--------
+
+- Resolve issue of ``build_tracker`` being ``None`` at runtime with ``pip>=22.1`` when using ``pip_shims``.  `#81 <https://github.com/sarugaku/pip-shims/issues/81>`_
+
+
+Pip_Shims 0.7.2 (2022-06-29)
+============================
+
+
+Features
+--------
+
+- Resolve issue of ``build_tracker`` being ``None`` at runtime with ``pip>=22.1`` when using ``pip_shims``.  `#81 <https://github.com/sarugaku/pip-shims/issues/81>`_
+
+
 Pip_Shims 0.7.1 (2022-06-29)
 ============================
 

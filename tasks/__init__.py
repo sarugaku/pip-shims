@@ -85,7 +85,7 @@ def _render_log():
         definitions,
     )
     versiondata = {
-        "version": "0.7.1",
+        "version": "0.7.2",
         "date": "2022-06-29",
     }
     rendered = render_fragments(

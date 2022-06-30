@@ -1,0 +1,1 @@
+Resolve issue of ``build_tracker`` being ``None`` at runtime with ``pip>=22.1`` when using ``pip_shims``.

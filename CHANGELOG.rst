@@ -1,15 +1,10 @@
 Pip_Shims 0.7.3 (2022-07-07)
 ============================
 
-
-Pip_Shims 0.7.2 (2022-06-29)
-============================
-
-
-Features
+Trivial
 --------
 
-- Resolve issue of ``build_tracker`` being ``None`` at runtime with ``pip>=22.1`` when using ``pip_shims``.  `#81 <https://github.com/sarugaku/pip-shims/issues/81>`_
+- Make the ``packaging`` imports easier to patch out to vendor'd packaging lib. `#82 <https://github.com/sarugaku/pip-shims/pull/82>`_
 
 
 Pip_Shims 0.7.2 (2022-06-29)

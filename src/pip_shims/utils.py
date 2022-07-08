@@ -384,14 +384,9 @@ def get_allowed_args(fn_or_class):
         default values.
     :rtype: Tuple[List[str], Dict[str, Any]]
     """
-    try:
-        signature = inspect.signature(fn_or_class)
-    except AttributeError:
-        import funcsigs
-
-        signature = funcsigs.signature(fn_or_class)
     args = []
     kwargs = {}
+    signature = inspect.signature(fn_or_class)
     for arg, param in signature.parameters.items():
         if (
             param.kind in (param.POSITIONAL_OR_KEYWORD, param.POSITIONAL_ONLY)

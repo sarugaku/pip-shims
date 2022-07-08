@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import types
+from tempfile import TemporaryDirectory
 
 from packaging import specifiers
 
@@ -22,13 +23,6 @@ from .utils import (
     nullcontext,
     suppress_setattr,
 )
-
-if sys.version_info[:2] < (3, 5):
-    from backports.tempfile import TemporaryDirectory
-else:
-    from tempfile import TemporaryDirectory
-
-from contextlib import ExitStack
 
 if MYPY_RUNNING:
     from optparse import Values
@@ -316,7 +310,7 @@ def get_tracker(tracker_creator=None, tracker_type="REQ"):
     else:
         req_tracker_args = []
         _, required_args = get_method_args(tracker_creator.__init__)  # type: ignore
-        with ExitStack() as ctx:
+        with contextlib.ExitStack() as ctx:
             if root is None:
                 root = ctx.enter_context(TemporaryDirectory(prefix=prefix))
                 if root:
@@ -369,7 +363,7 @@ def wheel_cache(
         raise TypeError("Format control or provider needed for wheel cache!")
     if not format_control:
         format_control = format_control_provider(None, None)
-    with ExitStack() as ctx:
+    with contextlib.ExitStack() as ctx:
         ctx.enter_context(tempdir_manager_provider())
         wheel_cache = wheel_cache_provider(cache_dir, format_control)
         yield wheel_cache
@@ -573,7 +567,7 @@ def get_requirement_set(
     )
     if session is None and "session" in required_args:
         session = get_session(install_cmd=install_command, options=options)
-    with ExitStack() as stack:
+    with contextlib.ExitStack() as stack:
         if wheel_cache is None:
             wheel_cache = stack.enter_context(wheel_cache_provider(cache_dir=cache_dir))
         results["wheel_cache"] = wheel_cache
@@ -682,9 +676,6 @@ def get_package_finder(
         if target_python and not received_python:
             tags = target_python.get_tags()
             version_impl = {t[0] for t in tags}
-            # impls = set([v[:2] for v in version_impl])
-            # impls.remove("py")
-            # impl = next(iter(impls), "py") if not target_python
             versions = {v[2:] for v in version_impl}
             build_kwargs.update(
                 {
@@ -978,7 +969,7 @@ def _ensure_wheel_cache(
     if wheel_cache is not None:
         yield wheel_cache
     elif wheel_cache_provider is not None:
-        with ExitStack() as stack:
+        with contextlib.ExitStack() as stack:
             cache_dir = getattr(options, "cache_dir", cache_dir)
             format_control = getattr(
                 options,
@@ -1332,7 +1323,7 @@ def resolve(  # noqa:C901
         "cache_dir": cache_dir,
     }
     kwargs, options = populate_options(install_command, options, **kwarg_map)
-    with ExitStack() as ctx:
+    with contextlib.ExitStack() as ctx:
         ctx.enter_context(tempdir_manager_provider())
         kwargs = ctx.enter_context(
             ensure_resolution_dirs(wheel_download_dir=wheel_download_dir, **kwargs)
@@ -1554,7 +1545,7 @@ def build_wheel(  # noqa:C901
     }
     if not req and not reqset:
         raise TypeError("Must provide either a requirement or requirement set to build")
-    with ExitStack() as ctx:
+    with contextlib.ExitStack() as ctx:
         kwargs = kwarg_map.copy()
         if wheel_cache is None and (reqset is not None or output_dir is None):
             if install_command is None:

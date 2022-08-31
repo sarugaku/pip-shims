@@ -238,7 +238,7 @@ def test_resolution(tmpdir, PipCommand):
                 "ignore_requires_python": selection_prefs.ignore_requires_python,
             }
         )
-        if parse_version(pip_version) >= parse_version("22.0"):
+        if parse_version("22.2") > parse_version(pip_version) >= parse_version("22.0"):
             finder_args["use_deprecated_html5lib"] = False
     else:
         finder_args = {
@@ -428,7 +428,7 @@ def test_wheelbuilder(tmpdir, PipCommand):
                 "ignore_requires_python": selection_prefs.ignore_requires_python,
             }
         )
-        if parse_version(pip_version) >= parse_version("22.0"):
+        if parse_version("22.2") > parse_version(pip_version) >= parse_version("22.0"):
             finder_args["use_deprecated_html5lib"] = False
     else:
         finder_args = {
